@@ -15,6 +15,9 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Types } from "mongoose"
 
+// Add revalidation configuration
+export const revalidate = 0 // Disable caching for this page
+
 interface RecentFile {
   _id: string
   title: string

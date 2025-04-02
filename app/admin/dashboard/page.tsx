@@ -14,9 +14,58 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Types } from "mongoose"
+import { Suspense } from "react"
 
 // Add revalidation configuration
 export const revalidate = 0 // Disable caching for this page
+
+// Loading component
+function DashboardLoading() {
+  return (
+    <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
+      <div>
+        <div className="h-8 w-64 bg-gray-200 rounded animate-pulse" />
+        <div className="h-4 w-96 bg-gray-200 rounded mt-2 animate-pulse" />
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="relative overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+              <div className="h-8 w-8 bg-gray-200 rounded-full animate-pulse" />
+            </CardHeader>
+            <CardContent>
+              <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
+              <div className="h-3 w-32 bg-gray-200 rounded mt-1 animate-pulse" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {[1, 2].map((i) => (
+          <Card key={i}>
+            <CardHeader>
+              <div className="h-6 w-32 bg-gray-200 rounded animate-pulse" />
+              <div className="h-4 w-48 bg-gray-200 rounded mt-2 animate-pulse" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((j) => (
+                  <div key={j} className="flex items-center space-x-4">
+                    <div className="h-4 w-4 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 interface RecentFile {
   _id: string
@@ -89,7 +138,7 @@ async function getDashboardData(): Promise<DashboardData> {
   }
 }
 
-export default async function AdminDashboardPage() {
+async function DashboardContent() {
   const data = await getDashboardData()
 
   return (
@@ -236,6 +285,14 @@ export default async function AdminDashboardPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default async function AdminDashboardPage() {
+  return (
+    <Suspense fallback={<DashboardLoading />}>
+      <DashboardContent />
+    </Suspense>
   )
 }
 

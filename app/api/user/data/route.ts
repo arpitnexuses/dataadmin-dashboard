@@ -26,7 +26,7 @@ interface LegacyUser extends Omit<IUser, "dataFiles"> {
 export async function GET(request: NextRequest) {
   try {
     const session = await getCurrentUser()
-    console.log("Session:", session)
+    // console.log("Session:", session)
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     // Find user by ID, handling potential invalid ObjectId
     let user: PopulatedUser | null = null
     try {
-      console.log("Finding user by ID:", session.id)
+      // console.log("Finding user by ID:", session.id)
       const foundUser = await User.findOne<IUser>({ 
         _id: new mongoose.Types.ObjectId(session.id) 
       })
@@ -49,13 +49,13 @@ export async function GET(request: NextRequest) {
       .lean()
       .exec()
 
-      console.log("Found user with data:", JSON.stringify(foundUser, null, 2))
+      // console.log("Found user with data:", JSON.stringify(foundUser, null, 2))
       user = foundUser as unknown as PopulatedUser
 
       // If user has old schema (dataFileId), migrate to new schema
       const legacyUser = foundUser as unknown as LegacyUser
       if (legacyUser && 'dataFileId' in legacyUser && !('dataFiles' in legacyUser)) {
-        console.log("Migrating user to new schema")
+        // console.log("Migrating user to new schema")
         const dataFile = await DataFile.findById(legacyUser.dataFileId)
           .select('filename originalName data.First_Name data.Last_Name data.Title data.Company data.Email data.Corporate_Phone data.Personal_Phone data.Employees_Size data.Industry data.Person_Linkedin_Url data.Website data.Company_Linkedin_Url data.Country data.Technologies data.Annual_Revenue')
         if (dataFile) {
@@ -83,10 +83,10 @@ export async function GET(request: NextRequest) {
         }
       }
     } catch (error) {
-      console.log("Error finding by ID:", error)
+      // console.log("Error finding by ID:", error)
       // If ID is invalid, try finding by email
       if (session.email) {
-        console.log("Finding user by email:", session.email)
+        // console.log("Finding user by email:", session.email)
         const foundUser = await User.findOne<IUser>({ email: session.email })
           .populate({
             path: "dataFiles.fileId",
@@ -96,13 +96,13 @@ export async function GET(request: NextRequest) {
           .lean()
           .exec()
 
-        console.log("Found user by email:", JSON.stringify(foundUser, null, 2))
+        // console.log("Found user by email:", JSON.stringify(foundUser, null, 2))
         user = foundUser as unknown as PopulatedUser
 
         // If user has old schema (dataFileId), migrate to new schema
         const legacyUser = foundUser as unknown as LegacyUser
         if (legacyUser && 'dataFileId' in legacyUser && !('dataFiles' in legacyUser)) {
-          console.log("Migrating user to new schema")
+          // console.log("Migrating user to new schema")
           const dataFile = await DataFile.findById(legacyUser.dataFileId)
             .select('filename originalName data.First_Name data.Last_Name data.Title data.Company data.Email data.Corporate_Phone data.Personal_Phone data.Employees_Size data.Industry data.Person_Linkedin_Url data.Website data.Company_Linkedin_Url data.Country data.Technologies data.Annual_Revenue')
           if (dataFile) {
@@ -142,13 +142,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "No data files found for this user" }, { status: 404 })
     }
 
-    console.log("User data files before mapping:", JSON.stringify(user.dataFiles, null, 2))
+    // console.log("User data files before mapping:", JSON.stringify(user.dataFiles, null, 2))
     const response = {
       title: user.title || "Data Dashboard",
       logoUrl: user.logoUrl,
       dataFiles: user.dataFiles.map((file) => {
-        console.log("Processing file:", file.fileId._id.toString())
-        console.log("File data sample:", file.fileId.data?.[0])
+        // console.log("Processing file:", file.fileId._id.toString())
+        // console.log("File data sample:", file.fileId.data?.[0])
         return {
           id: file.fileId._id.toString(),
           title: file.title,
@@ -174,10 +174,10 @@ export async function GET(request: NextRequest) {
       }),
     }
 
-    console.log("Final response data sample:", response.dataFiles[0]?.data?.[0])
+    // console.log("Final response data sample:", response.dataFiles[0]?.data?.[0])
     return NextResponse.json(response)
   } catch (error) {
-    console.error("Error fetching user data:", error)
+    // console.error("Error fetching user data:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

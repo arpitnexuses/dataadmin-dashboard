@@ -36,6 +36,9 @@ export function UserSidebar() {
         if (response.ok) {
           const data = await response.json()
           setUserData(data)
+          if (!currentFileIndex && data.dataFiles.length > 0) {
+            router.push("/dashboard?file=0")
+          }
         }
       } catch (error) {
         console.error("Error fetching user data:", error)
@@ -45,7 +48,7 @@ export function UserSidebar() {
     }
 
     fetchData()
-  }, [])
+  }, [currentFileIndex, router])
 
   const handleLogout = async () => {
     await fetch("/api/logout", { method: "POST" })

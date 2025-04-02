@@ -90,11 +90,11 @@ export function DataTable({ selectedFileIndex }: DataTableProps) {
         const response = await fetch("/api/user/data")
         if (response.ok) {
           const data = await response.json()
-          console.log("Fetched data:", data)
+          // console.log("Fetched data:", data)
           setUserData(data)
         }
       } catch (error) {
-        console.error("Error fetching user data:", error)
+        // console.error("Error fetching user data:", error)
       } finally {
         setLoading(false)
       }
@@ -109,7 +109,7 @@ export function DataTable({ selectedFileIndex }: DataTableProps) {
       return []
     }
     
-    console.log("Creating columns from data:", userData.dataFiles[selectedFileIndex].data[0])
+    // console.log("Creating columns from data:", userData.dataFiles[selectedFileIndex].data[0])
     
     const defaultColumns: ColumnDef<DataRow>[] = [
       {

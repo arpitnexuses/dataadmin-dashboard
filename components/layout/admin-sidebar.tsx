@@ -31,8 +31,8 @@ export function AdminSidebar() {
   ]
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white border-r border-blue-400/50 w-64">
-      <div className="relative p-4 border-b border-indigo-500/30">
+    <div className="flex flex-col h-full bg-zinc-900 text-white border-r border-zinc-800 w-64">
+      <div className="relative p-4 border-b border-zinc-800">
         <div className="flex flex-col items-center">
           <div className="relative w-full h-12 bg-transparent">
             <Image
@@ -65,8 +65,8 @@ export function AdminSidebar() {
                   className={cn(
                     "w-full justify-start gap-3 h-14 transition-all duration-200 text-base rounded-xl",
                     isActive
-                      ? "bg-white/15 text-white hover:bg-white/20"
-                      : "text-white/70 hover:text-white hover:bg-white/10"
+                      ? "bg-zinc-800 text-white hover:bg-zinc-700"
+                      : "text-white/70 hover:text-white hover:bg-zinc-800"
                   )}
                 >
                   <item.icon className="h-5 w-5" />
@@ -77,10 +77,10 @@ export function AdminSidebar() {
           })}
         </nav>
       </div>
-      <div className="p-3 border-t border-indigo-500/30">
+      <div className="p-3 border-t border-zinc-800">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 h-11 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 text-base"
+          className="w-full justify-start gap-3 h-11 text-white/70 hover:text-white hover:bg-zinc-800 transition-all duration-200 text-base"
           onClick={handleLogout}
         >
           <LogOut className="h-5 w-5" />

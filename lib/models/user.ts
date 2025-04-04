@@ -6,7 +6,6 @@ export interface IUser extends mongoose.Document {
   password: string
   role: "admin" | "user"
   title?: string
-  logoUrl?: string
   dataFiles: {
     fileId: mongoose.Types.ObjectId | IDataFile
     title: string
@@ -33,9 +32,6 @@ const userSchema = new Schema<IUser>(
       default: "user",
     },
     title: {
-      type: String,
-    },
-    logoUrl: {
       type: String,
     },
     dataFiles: [{

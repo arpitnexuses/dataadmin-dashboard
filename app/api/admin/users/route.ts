@@ -87,7 +87,6 @@ export async function POST(request: NextRequest) {
     const email = formData.get("email") as string
     const password = formData.get("password") as string
     const title = formData.get("title") as string
-    const logoUrl = formData.get("logoUrl") as string
     const file = formData.get("file") as File
 
     if (!email || !password || !title || !file) {
@@ -160,7 +159,6 @@ export async function POST(request: NextRequest) {
       password: hashedPassword,
       role: "user",
       title,
-      logoUrl: logoUrl || null,
       dataFiles: [{
         fileId: dataFile._id,
         title: title,
@@ -175,7 +173,6 @@ export async function POST(request: NextRequest) {
           id: newUser._id,
           email: newUser.email,
           title,
-          logoUrl,
         },
       },
       { status: 201 },

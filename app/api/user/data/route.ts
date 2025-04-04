@@ -145,7 +145,6 @@ export async function GET(request: NextRequest) {
     // console.log("User data files before mapping:", JSON.stringify(user.dataFiles, null, 2))
     const response = {
       title: user.title || "Data Dashboard",
-      logoUrl: user.logoUrl,
       dataFiles: user.dataFiles.map((file) => {
         // console.log("Processing file:", file.fileId._id.toString())
         // console.log("File data sample:", file.fileId.data?.[0])

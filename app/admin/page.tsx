@@ -9,7 +9,7 @@ export default async function AdminLoginPage() {
   const showSignup = !adminExists
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#F0FDFA] to-white">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-black">
       <AuthForm type="login" isAdmin={true} showSignup={showSignup} variant="admin" />
     </div>
   )

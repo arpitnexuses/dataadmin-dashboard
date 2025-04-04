@@ -137,25 +137,16 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
       id: "logo",
       header: "",
       cell: ({ row }) => {
-        const logoUrl = row.original.logoUrl
         return (
           <div className="flex items-center justify-center">
-            {logoUrl ? (
-              <div className="relative h-10 w-10 rounded-full overflow-hidden border-2 border-gray-200">
-                <Image
-                  src={logoUrl}
-                  alt={`${row.original.email} logo`}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            ) : (
-              <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center border-2 border-gray-200">
-                <span className="text-gray-500 text-sm font-medium">
-                  {row.original.email.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            )}
+            <div className="relative h-10 w-10 rounded-full overflow-hidden border-2 border-gray-200 bg-gray-100">
+              <Image
+                src="/user.png"
+                alt="User Avatar"
+                fill
+                className="object-cover"
+              />
+            </div>
           </div>
         )
       },
@@ -166,21 +157,21 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="-ml-3 h-8 data-[state=open]:bg-accent">
+              <Button variant="ghost" size="sm" className="-ml-3 h-8 text-zinc-400 hover:text-white hover:bg-zinc-800">
                 <span>Email</span>
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>Sort</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
+            <DropdownMenuContent align="start" className="bg-zinc-900 border-zinc-800">
+              <DropdownMenuLabel className="text-zinc-400">Sort</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => column.toggleSorting(false)} className="text-zinc-300 hover:bg-zinc-800 focus:bg-zinc-800">
                 Asc
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
+              <DropdownMenuItem onClick={() => column.toggleSorting(true)} className="text-zinc-300 hover:bg-zinc-800 focus:bg-zinc-800">
                 Desc
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Filter</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-zinc-800" />
+              <DropdownMenuLabel className="text-zinc-400">Filter</DropdownMenuLabel>
               <div className="p-2">
                 <input
                   type="text"
@@ -263,20 +254,23 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-8 w-8 p-0 text-zinc-400 hover:text-white hover:bg-zinc-800">
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedUserId(user._id)}>
+            <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+              <DropdownMenuItem 
+                onClick={() => setSelectedUserId(user._id)}
+                className="text-zinc-300 hover:bg-zinc-800 focus:bg-zinc-800"
+              >
                 <Upload className="mr-2 h-4 w-4" />
                 Add File
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className="bg-zinc-800" />
               <DropdownMenuItem
                 onClick={() => handleDeleteUser(user._id)}
-                className="text-red-600 focus:text-red-600"
+                className="text-red-500 hover:text-red-400 hover:bg-zinc-800 focus:bg-zinc-800"
               >
                 Delete
               </DropdownMenuItem>
@@ -296,6 +290,26 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    filterFns: {
+      employeeSize: (row, columnId, value) => {
+        const employeeCount = parseInt(row.getValue<string>(columnId).replace(/[^0-9]/g, '')) || 0;
+        switch (value) {
+          case 'lt100': return employeeCount < 100;
+          case '100-500': return employeeCount >= 100 && employeeCount <= 500;
+          case 'gt500': return employeeCount > 500;
+          default: return true;
+        }
+      },
+      revenue: (row, columnId, value) => {
+        const revenue = parseFloat(row.getValue<string>(columnId).replace(/[^0-9.-]+/g, "")) || 0;
+        switch (value) {
+          case 'lt1M': return revenue < 1000000;
+          case '1M-50M': return revenue >= 1000000 && revenue <= 50000000;
+          case 'gt50M': return revenue > 50000000;
+          default: return true;
+        }
+      }
+    },
     state: {
       sorting,
       columnFilters,
@@ -311,14 +325,14 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
   }
 
   return (
-    <>
-      <ScrollArea className="h-[calc(100vh-16rem)]">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup: HeaderGroup<User>) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+    <div className="rounded-md border border-zinc-800 bg-zinc-900">
+      <Table>
+        <TableHeader>
+          <TableRow className="border-zinc-800 bg-zinc-900 hover:bg-zinc-900">
+            {table.getHeaderGroups().map((headerGroup) => (
+              headerGroup.headers.map((header) => {
+                return (
+                  <TableHead key={header.id} className="text-zinc-400 bg-zinc-900 h-12">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -326,68 +340,56 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
                           header.getContext()
                         )}
                   </TableHead>
+                )
+              })
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows?.length ? (
+            table.getRowModel().rows.map((row) => (
+              <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() && "selected"}
+                className="border-zinc-800 hover:bg-zinc-900"
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id} className="text-zinc-300">
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
                 ))}
               </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row: Row<User>) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="hover:bg-muted/50 transition-colors"
-                >
-                  {row.getVisibleCells().map((cell: Cell<User, unknown>) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No users found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-        <div className="flex items-center justify-end space-x-2 py-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
-      </ScrollArea>
-
-      <Dialog open={!!selectedUserId} onOpenChange={(open) => !open && setSelectedUserId(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add New File</DialogTitle>
-          </DialogHeader>
-          {selectedUserId && (
-            <AddFileForm userId={selectedUserId} onSuccess={handleAddFileSuccess} />
+            ))
+          ) : (
+            <TableRow className="border-zinc-800">
+              <TableCell colSpan={columns.length} className="h-24 text-center text-zinc-400">
+                No results.
+              </TableCell>
+            </TableRow>
           )}
-        </DialogContent>
-      </Dialog>
-    </>
+        </TableBody>
+      </Table>
+      <div className="flex items-center justify-end space-x-2 p-4 bg-black border-t border-zinc-800">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+          className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
+        >
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+          className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
+        >
+          Next
+        </Button>
+      </div>
+    </div>
   )
 })
 

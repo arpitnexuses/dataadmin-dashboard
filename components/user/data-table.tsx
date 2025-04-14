@@ -53,6 +53,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Building2, Mail, Phone, Users, Globe, LinkedinIcon, DollarSign, Briefcase, MapPin } from "lucide-react"
+import { motion } from "framer-motion"
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -75,7 +76,7 @@ const getColumnColor = (value: string, columnKey: string) => {
       baseHue = Math.abs(hash % 30) + 0; // Warm oranges and reds (0-30)
       break;
     case 'Title':
-      baseHue = Math.abs(hash % 30) + 120; // Fresh greens (120-150)
+      baseHue = Math.abs(hash % 360); // Full color spectrum for titles
       break;
     case 'Country':
       baseHue = Math.abs(hash % 30) + 200; // Cool blues (200-230)
@@ -270,27 +271,27 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-8 text-gray-300 hover:text-white hover:bg-gray-800 -ml-3 data-[state=open]:bg-gray-800"
+                  className="h-8 text-gray-300 hover:text-white hover:bg-gray-800 -ml-3 data-[state=open]:bg-gray-800 font-semibold tracking-wide"
                 >
                   <span>{columnKey.replace(/_/g, ' ')}</span>
-                  <ChevronDown className="ml-2 h-4 w-4" />
+                  <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="bg-gray-900 border-gray-700">
+              <DropdownMenuContent align="start" className="bg-gray-900 border-gray-800">
                 <DropdownMenuLabel className="text-gray-300">Sort</DropdownMenuLabel>
                 <DropdownMenuItem 
                   onClick={() => column.toggleSorting(false)}
-                  className="text-gray-300 focus:bg-gray-800 focus:text-white"
+                  className="text-gray-300 hover:bg-gray-800 focus:bg-gray-800"
                 >
                   Asc
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => column.toggleSorting(true)}
-                  className="text-gray-300 focus:bg-gray-800 focus:text-white"
+                  className="text-gray-300 hover:bg-gray-800 focus:bg-gray-800"
                 >
                   Desc
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-gray-700" />
+                <DropdownMenuSeparator className="bg-gray-800" />
                 <DropdownMenuLabel className="text-gray-300">Filter</DropdownMenuLabel>
                 <div className="p-2">
                   <Input
@@ -318,15 +319,17 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
               const remainingCount = techs.length - MAX_VISIBLE;
               
               return (
-                <div className="flex items-center gap-1 max-w-[400px] h-7">
+                <div className="flex items-center gap-1.5 max-w-[350px] h-6">
                   {techs.slice(0, MAX_VISIBLE).map((tech, index) => (
                     <div 
                       key={index}
                       className="px-2 py-0.5 rounded-md text-xs whitespace-nowrap"
                       style={{ 
-                        backgroundColor: bgColor,
+                        backgroundColor: getColumnColor(tech, columnKey),
                         color: 'white',
                         fontWeight: '500',
+                        fontSize: '0.75rem',
+                        lineHeight: '1rem',
                       }}
                     >
                       {tech}
@@ -334,12 +337,31 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                   ))}
                   {remainingCount > 0 && (
                     <div 
-                      className="px-2 py-0.5 rounded-md text-xs whitespace-nowrap bg-gray-700 text-white"
+                      className="px-2 py-0.5 rounded-md text-xs whitespace-nowrap bg-gray-700/50 text-gray-300"
                       title={techs.slice(MAX_VISIBLE).join(', ')} // Show remaining on hover
                     >
-                      +{remainingCount} more
+                      +{remainingCount}
                     </div>
                   )}
+                </div>
+              );
+            }
+
+            // Special styling for Title column
+            if (columnKey === "Title") {
+              return (
+                <div 
+                  className="inline-flex items-center h-6 whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]"
+                  style={{ 
+                    color: 'text-gray-300',
+                    fontWeight: '500',
+                    fontSize: '0.875rem',
+                    lineHeight: '1rem',
+                  }}
+                  title={value} // Show full text on hover
+                >
+                  <span className="mr-1.5 text-4xl leading-none" style={{ color: getColumnColor(value, columnKey) }}>•</span>
+                  {value}
                 </div>
               );
             }
@@ -366,10 +388,21 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
           }
 
           // For other columns with long text
+          if (columnKey === "Email") {
+            return (
+              <div 
+                className="text-gray-300 h-6 flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[230px]"
+                title={value} // Show full text on hover
+              >
+                {value}
+              </div>
+            );
+          }
+
           if (columnKey === "Website" || columnKey === "Person_Linkedin_Url" || columnKey === "Company_Linkedin_Url") {
             return (
               <div 
-                className="text-gray-300 max-w-[200px] truncate h-7 flex items-center"
+                className="text-gray-300 max-w-[180px] truncate h-6 flex items-center"
                 title={value} // Show full text on hover
               >
                 {value}
@@ -378,7 +411,17 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
           }
 
           // Default rendering for other columns
-          return <div className="text-gray-300 h-7 flex items-center">{value}</div>;
+          if (columnKey === "Company") {
+            return (
+              <div 
+                className="text-gray-300 h-6 flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]"
+                title={value} // Show full text on hover
+              >
+                {value}
+              </div>
+            );
+          }
+          return <div className="text-gray-300 h-6 flex items-center">{value}</div>;
         },
       };
 
@@ -557,12 +600,12 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
   }
 
   return (
-    <Card className="border-none shadow-none w-full bg-black text-white">
-      <CardContent className="p-4">
+    <Card className="border-none shadow-none w-full bg-black text-white transition-all duration-300 hover:shadow-lg hover:shadow-gray-900/20">
+      <CardContent className="p-6">
         {/* Logo and Header */}
-        <div className="flex flex-col mb-8 w-full">
-          <div className="flex justify-between w-full">
-            <div className="relative w-32 h-10">
+        <div className="flex flex-col mb-2 w-full">
+          <div className="flex justify-between w-full items-center">
+            <div className="relative w-48 h-14 transition-transform duration-300 hover:scale-105">
               <img
                 src="https://cdn-nexlink.s3.us-east-2.amazonaws.com/Nexuses_logo_blue_(2)_3_721ee160-2cac-429c-af66-f55b7233f6ed.png"
                 alt="Nexuses Logo"
@@ -573,16 +616,121 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="text-gray-300 border-gray-700 hover:bg-gray-800 flex items-center gap-2 h-fit"
+              className="relative overflow-hidden text-gray-300 border-gray-700 hover:bg-gray-800/50 hover:text-white flex items-center gap-2 h-fit transition-all duration-300 hover:scale-105 hover:shadow-md hover:shadow-gray-900/20 group px-4 py-2 rounded-lg"
             >
-              <LogOut className="h-4 w-4" />
-              Logout
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-800/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="flex items-center gap-2 relative z-10">
+                <LogOut className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:rotate-180" />
+                <span className="font-medium tracking-wide">Logout</span>
+              </div>
             </Button>
           </div>
-          <div className="w-[calc(100%+32px)] h-[1px] bg-white my-3 -mx-4"></div>
-          <div className="flex flex-col gap-1">
-         
-            <h2 className="text-lg text-gray-400">{selectedFile.title}</h2>
+          <div className="relative w-full my-6 flex items-center justify-center overflow-hidden">
+            <motion.div
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              transition={{
+                duration: 1.2,
+                ease: [0.4, 0, 0.2, 1]
+              }}
+              className="relative w-full h-[2px]"
+            >
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{
+                  duration: 0.8,
+                  delay: 0.3
+                }}
+                className="absolute inset-0 z-40 h-[2px] w-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent"
+              />
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.75 }}
+                transition={{
+                  duration: 0.8,
+                  delay: 0.5
+                }}
+                className="absolute inset-0 z-30 h-[2px] w-full bg-gradient-to-r from-transparent via-cyan-500 to-transparent"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 0.8, scale: 1 }}
+                transition={{
+                  duration: 1,
+                  delay: 0.2
+                }}
+                className="absolute -inset-[2px] z-20 blur-[12px] bg-cyan-500/50"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 0.5, scale: 1 }}
+                transition={{
+                  duration: 1,
+                  delay: 0.2
+                }}
+                className="absolute -inset-[4px] z-10 blur-[20px] bg-cyan-400/30"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 0.3, scale: 1 }}
+                transition={{
+                  duration: 1,
+                  delay: 0.2
+                }}
+                className="absolute -inset-[6px] z-0 blur-[30px] bg-cyan-300/20"
+              />
+            </motion.div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-gray-300 border border-cyan-500/30 hover:border-cyan-500/50 bg-black/50 hover:bg-gray-900/50 flex items-center gap-2 w-fit relative group overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <span className="text-xl font-medium tracking-wide relative z-10">{selectedFile.title}</span>
+                  <ChevronDown className="h-4 w-4 relative z-10 group-hover:text-cyan-400 transition-colors duration-300" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                className="w-[300px] bg-black/95 border border-cyan-500 shadow-lg shadow-cyan-500/20 backdrop-blur-xl"
+                sideOffset={5}
+                align="start"
+                alignOffset={-4}
+              >
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent pointer-events-none"></div>
+                  <DropdownMenuLabel className="text-cyan-400 px-3 py-2 text-sm font-medium">Select File</DropdownMenuLabel>
+                </div>
+                <DropdownMenuSeparator className="bg-cyan-500/20" />
+                <div className="max-h-[300px] overflow-auto py-1">
+                  {userData?.dataFiles.map((file, index) => (
+                    <DropdownMenuItem
+                      key={file.id}
+                      className={cn(
+                        "text-gray-300 hover:text-white focus:text-white px-3 py-2 cursor-pointer transition-all duration-200",
+                        "hover:bg-cyan-500/10 focus:bg-cyan-500/10",
+                        "focus:outline-none focus:ring-0",
+                        selectedFileIndex === index && "bg-cyan-500/10 text-white"
+                      )}
+                      onClick={() => {
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('file', index.toString());
+                        window.location.href = url.toString();
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-cyan-500/50"></div>
+                        <span>{file.title}</span>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -775,30 +923,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
 
           {/* Filter Buttons Row */}
           <div className="flex flex-wrap gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-gray-300 border-gray-700 hover:bg-gray-800 flex items-center gap-2"
-                >
-                  Country
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-gray-900 border-gray-700">
-                <div className="p-2">
-                  <Input
-                    placeholder="Search country..."
-                    value={(table.getColumn("Country")?.getFilterValue() as string) ?? ""}
-                    onChange={(event) =>
-                      table.getColumn("Country")?.setFilterValue(event.target.value)
-                    }
-                    className="h-8 w-full bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus-visible:ring-gray-700"
-                  />
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Country dropdown removed */}
           </div>
         </div>
 
@@ -810,7 +935,10 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id} className="hover:bg-gray-900/50 border-none">
                     {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id} className="text-gray-300 bg-gray-900/50">
+                      <TableHead 
+                        key={header.id} 
+                        className="text-gray-300 bg-gradient-to-b from-gray-900 to-black border-b border-gray-800 px-3 py-3 first:rounded-tl-lg last:rounded-tr-lg"
+                      >
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -832,7 +960,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                       onClick={() => setSelectedRow(row.original)}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="text-gray-300">
+                        <TableCell key={cell.id} className="text-gray-300 px-3 py-2">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
@@ -855,164 +983,195 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
 
         {/* Row Details Modal */}
         <Dialog open={!!selectedRow} onOpenChange={() => setSelectedRow(null)}>
-          <DialogContent className="bg-gradient-to-b from-gray-900 to-black border-gray-800 text-white max-w-4xl">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-white">Contact Details</DialogTitle>
-            </DialogHeader>
-            {selectedRow && (
-              <div className="mt-6">
-                {/* Header with Avatar */}
-                <div className="flex items-center gap-6 pb-6 border-b border-gray-800">
-                  <div className="h-20 w-20 rounded-full bg-black border border-gray-800 flex items-center justify-center text-2xl font-bold text-white shadow-xl">
-                    {`${selectedRow.First_Name[0]}${selectedRow.Last_Name[0]}`}
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-semibold text-white">{`${selectedRow.First_Name} ${selectedRow.Last_Name}`}</h3>
-                    <p className="text-lg text-gray-400">{selectedRow.Title}</p>
-                    <p className="text-blue-400 mt-1">{selectedRow.Company}</p>
-                  </div>
-                </div>
-
-                {/* Two Column Layout */}
-                <div className="grid md:grid-cols-2 gap-8 mt-6">
-                  {/* Left Column */}
-                  <div className="space-y-6">
-                    {/* Contact Information */}
-                    <div className="bg-gray-900/50 rounded-lg p-4 space-y-4">
-                      <h4 className="text-lg font-semibold text-white mb-4">Contact Information</h4>
-                      
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-red-500/10 flex items-center justify-center">
-                          <Mail className="h-5 w-5 text-red-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-400">Email</p>
-                          <a href={`mailto:${selectedRow.Email}`} className="text-white hover:underline">{selectedRow.Email}</a>
-                        </div>
-                      </div>
-
-                      {selectedRow.Corporate_Phone && (
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center">
-                            <Phone className="h-5 w-5 text-orange-400" />
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-400">Corporate Phone</p>
-                            <p className="text-white">{selectedRow.Corporate_Phone}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-pink-500/10 flex items-center justify-center">
-                          <MapPin className="h-5 w-5 text-pink-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-400">Location</p>
-                          <p className="text-white">{selectedRow.Country}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Online Presence */}
-                    <div className="bg-gray-900/50 rounded-lg p-4 space-y-4">
-                      <h4 className="text-lg font-semibold text-white mb-4">Online Presence</h4>
-                      
-                      {selectedRow.Website && (
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-cyan-500/10 flex items-center justify-center">
-                            <Globe className="h-5 w-5 text-cyan-400" />
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-400">Website</p>
-                            <a href={selectedRow.Website} target="_blank" rel="noopener noreferrer" className="text-white hover:underline">{selectedRow.Website}</a>
-                          </div>
-                        </div>
-                      )}
-
-                      {selectedRow.Person_Linkedin_Url && (
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                            <LinkedinIcon className="h-5 w-5 text-blue-400" />
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-400">LinkedIn Profile</p>
-                            <a href={selectedRow.Person_Linkedin_Url} target="_blank" rel="noopener noreferrer" className="text-white hover:underline">View Profile</a>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right Column */}
-                  <div className="space-y-6">
-                    {/* Company Information */}
-                    <div className="bg-gray-900/50 rounded-lg p-4 space-y-4">
-                      <h4 className="text-lg font-semibold text-white mb-4">Company Information</h4>
-                      
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                          <Building2 className="h-5 w-5 text-blue-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-400">Company</p>
-                          <p className="text-white">{selectedRow.Company}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                          <Users className="h-5 w-5 text-green-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-400">Company Size</p>
-                          <p className="text-white">{selectedRow.Employees_Size} employees</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-purple-500/10 flex items-center justify-center">
-                          <Briefcase className="h-5 w-5 text-purple-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-400">Industry</p>
-                          <p className="text-white">{selectedRow.Industry}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                          <DollarSign className="h-5 w-5 text-yellow-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-400">Annual Revenue</p>
-                          <p className="text-white">{selectedRow.Annual_Revenue}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Technologies */}
-                    {selectedRow.Technologies && (
-                      <div className="bg-gray-900/50 rounded-lg p-4">
-                        <h4 className="text-lg font-semibold text-white mb-4">Technologies</h4>
-                        <ScrollArea className="h-[120px]">
-                          <div className="flex flex-wrap gap-2 pr-4">
-                            {selectedRow.Technologies.split(',').map((tech, index) => (
-                              <Badge 
-                                key={index} 
-                                className="bg-gray-800 text-white hover:bg-gray-700 px-3 py-1 rounded-full text-sm"
-                              >
-                                {tech.trim()}
-                              </Badge>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      </div>
-                    )}
-                  </div>
-                </div>
+          <DialogContent className="bg-black border border-cyan-500 text-white max-w-3xl p-0 gap-0">
+            <div className="relative w-full">
+              {/* Header Section with Gradient Overlay */}
+              <div className="relative p-6 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent pointer-events-none"></div>
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-bold text-white tracking-tight">Contact Details</DialogTitle>
+                </DialogHeader>
               </div>
-            )}
+
+              {selectedRow && (
+                <div className="px-6 pb-6">
+                  {/* Header with Avatar */}
+                  <div className="flex items-start gap-6 pb-6 border-b border-gray-800/50">
+                    <div className="relative group">
+                      <div className="absolute inset-0 bg-cyan-500/20 rounded-full blur-lg group-hover:blur-xl transition-all duration-500 opacity-50"></div>
+                      <div className="h-16 w-16 rounded-full bg-black border-2 border-cyan-500/50 flex items-center justify-center text-2xl font-bold text-white relative">
+                        {selectedRow.Last_Name ? `${selectedRow.First_Name[0]}${selectedRow.Last_Name[0]}` : selectedRow.First_Name[0]}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-2xl font-semibold text-white tracking-tight">{`${selectedRow.First_Name} ${selectedRow.Last_Name}`}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base text-cyan-400 font-medium">{selectedRow.Title}</span>
+                        <span className="text-gray-500">•</span>
+                        <span className="text-base text-gray-400">{selectedRow.Company}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Two Column Layout with Enhanced Cards */}
+                  <div className="grid md:grid-cols-2 gap-4 mt-6">
+                    {/* Left Column */}
+                    <div className="space-y-4">
+                      {/* Contact Information */}
+                      <div className="bg-gradient-to-b from-gray-900/50 to-black/30 backdrop-blur-xl rounded-lg p-4 space-y-4 border border-gray-800/50">
+                        <h4 className="text-base font-semibold text-white flex items-center gap-2">
+                          <span className="h-1 w-1 rounded-full bg-cyan-500"></span>
+                          Contact Information
+                        </h4>
+                        
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 group">
+                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-red-500/10 to-red-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
+                              <Mail className="h-4 w-4 text-red-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Email</p>
+                              <a href={`mailto:${selectedRow.Email}`} className="text-sm text-white hover:text-cyan-400 transition-colors">{selectedRow.Email}</a>
+                            </div>
+                          </div>
+
+                          {selectedRow.Corporate_Phone && (
+                            <div className="flex items-center gap-3 group">
+                              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-500/10 to-orange-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
+                                <Phone className="h-4 w-4 text-orange-400" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">Corporate Phone</p>
+                                <p className="text-sm text-white">{selectedRow.Corporate_Phone}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-3 group">
+                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-pink-500/10 to-pink-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
+                              <MapPin className="h-4 w-4 text-pink-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Location</p>
+                              <p className="text-sm text-white">{selectedRow.Country}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Online Presence */}
+                      <div className="bg-gradient-to-b from-gray-900/50 to-black/30 backdrop-blur-xl rounded-lg p-4 space-y-4 border border-gray-800/50">
+                        <h4 className="text-base font-semibold text-white flex items-center gap-2">
+                          <span className="h-1 w-1 rounded-full bg-cyan-500"></span>
+                          Online Presence
+                        </h4>
+                        
+                        <div className="space-y-3">
+                          {selectedRow.Website && (
+                            <div className="flex items-center gap-3 group">
+                              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
+                                <Globe className="h-4 w-4 text-cyan-400" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">Website</p>
+                                <a href={selectedRow.Website} target="_blank" rel="noopener noreferrer" className="text-sm text-white hover:text-cyan-400 transition-colors">{selectedRow.Website}</a>
+                              </div>
+                            </div>
+                          )}
+
+                          {selectedRow.Person_Linkedin_Url && (
+                            <div className="flex items-center gap-3 group">
+                              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
+                                <LinkedinIcon className="h-4 w-4 text-blue-400" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">LinkedIn Profile</p>
+                                <a href={selectedRow.Person_Linkedin_Url} target="_blank" rel="noopener noreferrer" className="text-sm text-white hover:text-cyan-400 transition-colors">View Profile</a>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="space-y-4">
+                      {/* Company Information */}
+                      <div className="bg-gradient-to-b from-gray-900/50 to-black/30 backdrop-blur-xl rounded-lg p-4 space-y-4 border border-gray-800/50">
+                        <h4 className="text-base font-semibold text-white flex items-center gap-2">
+                          <span className="h-1 w-1 rounded-full bg-cyan-500"></span>
+                          Company Information
+                        </h4>
+                        
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 group">
+                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
+                              <Building2 className="h-4 w-4 text-blue-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Company</p>
+                              <p className="text-sm text-white">{selectedRow.Company}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 group">
+                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-green-500/10 to-green-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
+                              <Users className="h-4 w-4 text-green-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Company Size</p>
+                              <p className="text-sm text-white">{selectedRow.Employees_Size} employees</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 group">
+                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
+                              <Briefcase className="h-4 w-4 text-purple-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Industry</p>
+                              <p className="text-sm text-white">{selectedRow.Industry}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 group">
+                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
+                              <DollarSign className="h-4 w-4 text-yellow-400" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Annual Revenue</p>
+                              <p className="text-sm text-white">{selectedRow.Annual_Revenue}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Technologies */}
+                      {selectedRow.Technologies && (
+                        <div className="bg-gradient-to-b from-gray-900/50 to-black/30 backdrop-blur-xl rounded-lg p-4 border border-gray-800/50">
+                          <h4 className="text-base font-semibold text-white flex items-center gap-2 mb-3">
+                            <span className="h-1 w-1 rounded-full bg-cyan-500"></span>
+                            Technologies
+                          </h4>
+                          <ScrollArea className="h-[100px]">
+                            <div className="flex flex-wrap gap-1.5 pr-4">
+                              {selectedRow.Technologies.split(',').map((tech, index) => (
+                                <Badge 
+                                  key={index} 
+                                  className="bg-gray-800/50 text-white hover:bg-gray-700/50 px-2 py-1 text-xs rounded transition-colors border border-gray-700/50"
+                                >
+                                  {tech.trim()}
+                                </Badge>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
 

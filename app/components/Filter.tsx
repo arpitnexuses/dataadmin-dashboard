@@ -258,6 +258,7 @@ export default function Filter({ isOpen, onClose, onApplyFilters, data }: Filter
       ...prev,
       [section]: prev[section].filter(v => v !== value)
     }));
+    setOpenSection(null);
   };
 
   const clearFilters = () => {
@@ -267,6 +268,12 @@ export default function Filter({ isOpen, onClose, onApplyFilters, data }: Filter
   };
 
   const handleApply = () => {
+    // Close all open dropdowns
+    const openDropdowns = document.querySelectorAll('[data-state="open"]');
+    openDropdowns.forEach((dropdown) => {
+      (dropdown as HTMLElement).click();
+    });
+
     const processedFilters = { ...selectedFilters };
     
     // Process Employee Size filters
@@ -293,6 +300,7 @@ export default function Filter({ isOpen, onClose, onApplyFilters, data }: Filter
       });
     }
 
+    // Apply filters and close the filter modal
     onApplyFilters(processedFilters);
     onClose();
   };
@@ -306,13 +314,13 @@ export default function Filter({ isOpen, onClose, onApplyFilters, data }: Filter
     <>
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          className="fixed inset-0 bg-[#1C1C1C] bg-opacity-50 z-40"
           onClick={onClose}
         />
       )}
       
       <div
-        className={`fixed right-0 top-0 h-full w-96 bg-black shadow-lg transform transition-transform duration-300 ease-in-out ${
+        className={`fixed right-0 top-0 h-full w-96 bg-[#1C1C1C] shadow-lg transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         } z-50 flex flex-col border-l border-white/20`}
       >
@@ -339,7 +347,7 @@ export default function Filter({ isOpen, onClose, onApplyFilters, data }: Filter
                 <div className="relative">
                   {/* Selected Items Display */}
                   <div 
-                    className="min-h-[42px] bg-black rounded-md px-3 py-2 cursor-pointer border border-gray-800 hover:border-gray-700"
+                    className="min-h-[42px] bg-[#1C1C1C] rounded-md px-3 py-2 cursor-pointer border border-gray-800 hover:border-gray-700"
                     onClick={() => setOpenSection(openSection === section.title ? null : section.title)}
                   >
                     <div className="flex flex-wrap gap-2">
@@ -374,7 +382,7 @@ export default function Filter({ isOpen, onClose, onApplyFilters, data }: Filter
 
                   {/* Dropdown Options */}
                   {openSection === section.title && section.options.length > 0 && (
-                    <div className="absolute z-10 mt-1 w-full bg-black border border-gray-800 rounded-md shadow-lg">
+                    <div className="absolute z-10 mt-1 w-full bg-[#1C1C1C] border border-gray-800 rounded-md shadow-lg">
                       <div className="py-1 max-h-48 overflow-auto scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
                         {section.options.map((option) => (
                           <div

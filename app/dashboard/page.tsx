@@ -55,7 +55,7 @@ export default function UserDashboardPage() {
 
   if (dataFiles.length === 0) {
     return (
-      <div className="min-h-screen w-full bg-black">
+      <div className="min-h-screen w-full bg-[#1C1C1C]">
         <div className="container mx-auto py-8">
           <div className="text-center text-white">
             <h2 className="text-2xl font-bold mb-4">No Data Files Available</h2>
@@ -67,7 +67,7 @@ export default function UserDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-black">
+    <div className="min-h-screen w-full bg-[#1C1C1C]">
       <div className="container mx-auto py-8">
         {/* <h1 className="text-2xl font-bold text-white mb-6">Your Data Files</h1>
         
@@ -85,7 +85,7 @@ export default function UserDashboardPage() {
               data={tableData}
             />
             
-            <Suspense fallback={<div className="text-gray-400">Loading...</div>}>
+            <Suspense fallback={<div className="text-gray-400 bg-[#1C1C1C] min-h-screen">Loading...</div>}>
               <DataTable 
                 selectedFileIndex={parseInt(selectedFile)}
                 activeFilters={activeFilters}

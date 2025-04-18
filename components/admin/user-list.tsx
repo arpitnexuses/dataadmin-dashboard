@@ -318,7 +318,7 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64 bg-[#1C1C1C]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
@@ -369,7 +369,7 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
           )}
         </TableBody>
       </Table>
-      <div className="flex items-center justify-end space-x-2 p-4 bg-black border-t border-zinc-800">
+      <div className="flex items-center justify-end space-x-2 p-4 bg-[#1C1C1C] border-t border-zinc-800">
         <Button
           variant="outline"
           size="sm"

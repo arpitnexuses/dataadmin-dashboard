@@ -22,7 +22,7 @@ export const revalidate = 0 // Disable caching for this page
 // Loading component
 function DashboardLoading() {
   return (
-    <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
+    <div className="p-8 space-y-8 max-w-[1600px] mx-auto bg-[#1C1C1C] min-h-screen">
       <div>
         <div className="h-8 w-64 bg-zinc-800 rounded animate-pulse" />
         <div className="h-4 w-96 bg-zinc-800 rounded mt-2 animate-pulse" />
@@ -217,7 +217,7 @@ async function DashboardContent() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="bg-black border-zinc-800">
+        <Card className="bg-[#1C1C1C] border-zinc-800">
           <CardHeader>
             <CardTitle className="text-white">Recent Users</CardTitle>
             <CardDescription className="text-zinc-400">
@@ -253,7 +253,7 @@ async function DashboardContent() {
             </ScrollArea>
           </CardContent>
         </Card>
-        <Card className="bg-black border-zinc-800">
+        <Card className="bg-[#1C1C1C] border-zinc-800">
           <CardHeader>
             <CardTitle className="text-white">Recent Files</CardTitle>
             <CardDescription className="text-zinc-400">

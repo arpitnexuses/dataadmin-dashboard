@@ -96,7 +96,7 @@ export function CreateUserForm({ onSuccess, onUserCreated }: CreateUserFormProps
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="bg-black border-zinc-800 text-white placeholder:text-zinc-500 focus:ring-zinc-700 focus:border-zinc-700"
+              className="bg-[#1C1C1C] border-zinc-800 text-white placeholder:text-zinc-500 focus:ring-zinc-700 focus:border-zinc-700"
               placeholder="user@example.com"
             />
           </div>
@@ -109,7 +109,7 @@ export function CreateUserForm({ onSuccess, onUserCreated }: CreateUserFormProps
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="bg-black border-zinc-800 text-white placeholder:text-zinc-500 focus:ring-zinc-700 focus:border-zinc-700"
+              className="bg-[#1C1C1C] border-zinc-800 text-white placeholder:text-zinc-500 focus:ring-zinc-700 focus:border-zinc-700"
             />
           </div>
 
@@ -121,7 +121,7 @@ export function CreateUserForm({ onSuccess, onUserCreated }: CreateUserFormProps
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              className="bg-black border-zinc-800 text-white placeholder:text-zinc-500 focus:ring-zinc-700 focus:border-zinc-700"
+              className="bg-[#1C1C1C] border-zinc-800 text-white placeholder:text-zinc-500 focus:ring-zinc-700 focus:border-zinc-700"
               placeholder="Monthly Sales Report"
             />
           </div>
@@ -133,7 +133,7 @@ export function CreateUserForm({ onSuccess, onUserCreated }: CreateUserFormProps
               type="file"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
               accept=".csv,.xlsx,.xls"
-              className="bg-black border-zinc-800 text-white file:bg-zinc-900 file:text-white file:border-0 file:mr-4 file:py-2 file:px-4 hover:file:bg-zinc-800"
+              className="bg-[#1C1C1C] border-zinc-800 text-white file:bg-zinc-900 file:text-white file:border-0 file:mr-4 file:py-2 file:px-4 hover:file:bg-zinc-800"
             />
             <p className="text-sm text-zinc-500">Upload a CSV or Excel file with the data to be displayed</p>
           </div>

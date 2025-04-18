@@ -54,6 +54,8 @@ import {
 } from "@/components/ui/dialog"
 import { Building2, Mail, Phone, Users, Globe, LinkedinIcon, DollarSign, Briefcase, MapPin } from "lucide-react"
 import { motion } from "framer-motion"
+import { BarChart, PieChart, LineChart } from "lucide-react"
+import { AnalyticsModal } from "./analytics-modal"
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -190,6 +192,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
   const [globalFilter, setGlobalFilter] = useState("")
   const [selectedRow, setSelectedRow] = useState<DataRow | null>(null)
   const [isFilterOpen, setIsFilterOpenState] = useState(false)
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -559,7 +562,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
 
   if (loading) {
     return (
-      <Card className="border-none shadow-none w-full bg-black text-white">
+      <Card className="border-none shadow-none w-full bg-[#1C1C1C] text-white">
         <CardContent className="p-8">
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-300"></div>
@@ -600,12 +603,12 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
   }
 
   return (
-    <Card className="border-none shadow-none w-full bg-black text-white transition-all duration-300 hover:shadow-lg hover:shadow-gray-900/20">
-      <CardContent className="p-6">
+    <Card className="border-none shadow-none w-full bg-[#1C1C1C] text-white transition-all duration-300 hover:shadow-lg hover:shadow-gray-900/20">
+      <CardContent className="p-1">
         {/* Logo and Header */}
-        <div className="flex flex-col mb-2 w-full">
-          <div className="flex justify-between w-full items-center">
-            <div className="relative w-48 h-14 transition-transform duration-300 hover:scale-105">
+        <div className="flex flex-col mb-1 w-full">
+          <div className="flex justify-between w-full items-center px-1">
+            <div className="relative w-40 h-12 transition-transform duration-300 hover:scale-105">
               <img
                 src="https://cdn-nexlink.s3.us-east-2.amazonaws.com/Nexuses_logo_blue_(2)_3_721ee160-2cac-429c-af66-f55b7233f6ed.png"
                 alt="Nexuses Logo"
@@ -625,7 +628,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
               </div>
             </Button>
           </div>
-          <div className="relative w-full my-6 flex items-center justify-center overflow-hidden">
+          <div className="relative w-full my-3 flex items-center justify-center overflow-hidden">
             <motion.div
               initial={{ width: "0%" }}
               animate={{ width: "100%" }}
@@ -682,60 +685,72 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
               />
             </motion.div>
           </div>
-          <div className="flex flex-col gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-gray-300 border border-cyan-500/30 hover:border-cyan-500/50 bg-black/50 hover:bg-gray-900/50 flex items-center gap-2 w-fit relative group overflow-hidden"
+          <div className="flex flex-col gap-2 px-1">
+            <div className="flex items-center gap-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-gray-300 border border-cyan-500/30 hover:border-cyan-500/50 bg-[#1C1C1C]/50 hover:bg-gray-900/50 flex items-center gap-2 w-fit relative group overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <span className="text-xl font-medium tracking-wide relative z-10">{selectedFile.title}</span>
+                    <ChevronDown className="h-4 w-4 relative z-10 group-hover:text-cyan-400 transition-colors duration-300" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent 
+                  className="w-[300px] bg-gradient-to-b from-gray-800/95 to-gray-900/95 border border-cyan-500 shadow-lg shadow-cyan-500/20 backdrop-blur-xl"
+                  sideOffset={5}
+                  align="start"
+                  alignOffset={-4}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <span className="text-xl font-medium tracking-wide relative z-10">{selectedFile.title}</span>
-                  <ChevronDown className="h-4 w-4 relative z-10 group-hover:text-cyan-400 transition-colors duration-300" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent 
-                className="w-[300px] bg-black/95 border border-cyan-500 shadow-lg shadow-cyan-500/20 backdrop-blur-xl"
-                sideOffset={5}
-                align="start"
-                alignOffset={-4}
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent pointer-events-none"></div>
+                    <DropdownMenuLabel className="text-cyan-400 px-3 py-2 text-sm font-medium">Select File</DropdownMenuLabel>
+                  </div>
+                  <DropdownMenuSeparator className="bg-cyan-500/20" />
+                  <div className="max-h-[300px] overflow-auto py-1">
+                    {userData?.dataFiles.map((file, index) => (
+                      <DropdownMenuItem
+                        key={file.id}
+                        className={cn(
+                          "text-gray-300 hover:text-white focus:text-white px-3 py-2 cursor-pointer transition-all duration-200",
+                          "hover:bg-cyan-500/10 focus:bg-cyan-500/10",
+                          "focus:outline-none focus:ring-0",
+                          selectedFileIndex === index && "bg-cyan-500/10 text-white"
+                        )}
+                        onClick={() => {
+                          const url = new URL(window.location.href);
+                          url.searchParams.set('file', index.toString());
+                          window.location.href = url.toString();
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-cyan-500/50"></div>
+                          <span>{file.title}</span>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-gray-300 border border-cyan-500/30 hover:border-cyan-500/50 bg-[#1C1C1C]/50 hover:bg-gray-900/50 flex items-center gap-2 relative group overflow-hidden"
+                onClick={() => setIsAnalyticsOpen(true)}
               >
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent pointer-events-none"></div>
-                  <DropdownMenuLabel className="text-cyan-400 px-3 py-2 text-sm font-medium">Select File</DropdownMenuLabel>
-                </div>
-                <DropdownMenuSeparator className="bg-cyan-500/20" />
-                <div className="max-h-[300px] overflow-auto py-1">
-                  {userData?.dataFiles.map((file, index) => (
-                    <DropdownMenuItem
-                      key={file.id}
-                      className={cn(
-                        "text-gray-300 hover:text-white focus:text-white px-3 py-2 cursor-pointer transition-all duration-200",
-                        "hover:bg-cyan-500/10 focus:bg-cyan-500/10",
-                        "focus:outline-none focus:ring-0",
-                        selectedFileIndex === index && "bg-cyan-500/10 text-white"
-                      )}
-                      onClick={() => {
-                        const url = new URL(window.location.href);
-                        url.searchParams.set('file', index.toString());
-                        window.location.href = url.toString();
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-cyan-500/50"></div>
-                        <span>{file.title}</span>
-                      </div>
-                    </DropdownMenuItem>
-                  ))}
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <BarChart className="h-4 w-4 relative z-10" />
+                <span className="relative z-10">Analytics</span>
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Filters Section */}
-        <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-col gap-2 mb-3 px-1">
           {/* Top Row - Search and Actions */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 w-full max-w-sm">
@@ -745,7 +760,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                   placeholder="Search in all columns..."
                   value={globalFilter ?? ""}
                   onChange={(event) => setGlobalFilter(event.target.value)}
-                  className="pl-8 bg-black border-gray-700 text-white placeholder:text-gray-400 focus-visible:ring-gray-700"
+                  className="pl-8 bg-[#1C1C1C] border-gray-700 text-white placeholder:text-gray-400 focus-visible:ring-gray-700"
                 />
               </div>
             </div>
@@ -753,14 +768,22 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsFilterOpen(true)}
+                onClick={() => {
+                  // Close any open dropdown menu
+                  const openDropdown = document.querySelector('[data-state="open"]');
+                  if (openDropdown) {
+                    (openDropdown as HTMLElement).click();
+                  }
+                  // Open the filter
+                  setIsFilterOpen(true);
+                }}
                 className="text-gray-300 border-gray-700 hover:bg-gray-800 flex items-center gap-2"
               >
                 <Filter className="h-4 w-4" />
                 Advanced Filters {Object.keys(activeFilters).length > 0 && `(${Object.keys(activeFilters).length})`}
               </Button>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+                {/* <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
@@ -769,8 +792,8 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                     <Filter className="h-4 w-4 mr-2" />
                     Filter
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-[300px] bg-gradient-to-b from-black to-gray-900/95 border-gray-700 p-3 backdrop-blur-sm">
+                </DropdownMenuTrigger> */}
+                <DropdownMenuContent className="w-[300px] bg-gradient-to-b from-gray-800 to-gray-900/95 border-gray-700 p-3 backdrop-blur-sm">
                   <div className="space-y-4">
                     {generalFilters && generalFilters.titles && generalFilters.titles.length > 0 && (
                       <div>
@@ -903,7 +926,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                     Export
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-[200px] bg-gray-900 border-gray-700">
+                <DropdownMenuContent className="w-[200px] bg-gradient-to-b from-gray-800 to-gray-900 border-gray-700">
                   <DropdownMenuItem 
                     className="text-gray-300 focus:bg-gray-800 focus:text-white"
                     onClick={() => exportToExcel(false)}
@@ -921,23 +944,31 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
             </div>
           </div>
 
-          {/* Filter Buttons Row */}
-          <div className="flex flex-wrap gap-2">
-            {/* Country dropdown removed */}
-          </div>
+          {/* Action Buttons Row */}
+          {/* <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-gray-300 border border-cyan-500/30 hover:border-cyan-500/50 bg-black/50 hover:bg-gray-900/50 flex items-center gap-2"
+              onClick={() => setIsAnalyticsOpen(true)}
+            >
+              <BarChart className="h-4 w-4" />
+              Analytics
+            </Button>
+          </div> */}
         </div>
 
         {/* Table Section */}
-        <div className="rounded-lg bg-black">
+        <div className="rounded-lg bg-[#1C1C1C] border border-gray-700">
           <div className="relative w-full overflow-auto">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="hover:bg-gray-900/50 border-none">
+                  <TableRow key={headerGroup.id} className="hover:bg-gray-900/50 border-b border-gray-700">
                     {headerGroup.headers.map((header) => (
                       <TableHead 
                         key={header.id} 
-                        className="text-gray-300 bg-gradient-to-b from-gray-900 to-black border-b border-gray-800 px-3 py-3 first:rounded-tl-lg last:rounded-tr-lg"
+                        className="text-gray-300 bg-gradient-to-b from-gray-700 to-[#1C1C1C] border-b border-gray-800 px-2 py-1 first:rounded-tl-lg last:rounded-tr-lg"
                       >
                         {header.isPlaceholder
                           ? null
@@ -956,11 +987,11 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
-                      className="hover:bg-gray-900/50 border-none cursor-pointer"
+                      className="hover:bg-gray-900/50 border-b border-gray-700 cursor-pointer"
                       onClick={() => setSelectedRow(row.original)}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="text-gray-300 px-3 py-2">
+                        <TableCell key={cell.id} className="text-gray-300 px-2 py-1">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
@@ -970,7 +1001,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                   <TableRow>
                     <TableCell
                       colSpan={columns.length}
-                      className="h-24 text-center text-gray-400"
+                      className="h-16 text-center text-gray-400"
                     >
                       No results.
                     </TableCell>
@@ -983,7 +1014,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
 
         {/* Row Details Modal */}
         <Dialog open={!!selectedRow} onOpenChange={() => setSelectedRow(null)}>
-          <DialogContent className="bg-black border border-cyan-500 text-white max-w-3xl p-0 gap-0">
+          <DialogContent className="bg-gradient-to-b from-gray-800 to-gray-900 border border-cyan-500 text-white max-w-3xl p-0 gap-0">
             <div className="relative w-full">
               {/* Header Section with Gradient Overlay */}
               <div className="relative p-6 overflow-hidden">
@@ -999,7 +1030,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                   <div className="flex items-start gap-6 pb-6 border-b border-gray-800/50">
                     <div className="relative group">
                       <div className="absolute inset-0 bg-cyan-500/20 rounded-full blur-lg group-hover:blur-xl transition-all duration-500 opacity-50"></div>
-                      <div className="h-16 w-16 rounded-full bg-black border-2 border-cyan-500/50 flex items-center justify-center text-2xl font-bold text-white relative">
+                      <div className="h-16 w-16 rounded-full bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-cyan-500/50 flex items-center justify-center text-2xl font-bold text-white relative">
                         {selectedRow.Last_Name ? `${selectedRow.First_Name[0]}${selectedRow.Last_Name[0]}` : selectedRow.First_Name[0]}
                       </div>
                     </div>
@@ -1018,7 +1049,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                     {/* Left Column */}
                     <div className="space-y-4">
                       {/* Contact Information */}
-                      <div className="bg-gradient-to-b from-gray-900/50 to-black/30 backdrop-blur-xl rounded-lg p-4 space-y-4 border border-gray-800/50">
+                      <div className="bg-gradient-to-b from-gray-800/50 to-gray-900/30 backdrop-blur-xl rounded-lg p-4 space-y-4 border border-gray-800/50">
                         <h4 className="text-base font-semibold text-white flex items-center gap-2">
                           <span className="h-1 w-1 rounded-full bg-cyan-500"></span>
                           Contact Information
@@ -1060,7 +1091,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                       </div>
 
                       {/* Online Presence */}
-                      <div className="bg-gradient-to-b from-gray-900/50 to-black/30 backdrop-blur-xl rounded-lg p-4 space-y-4 border border-gray-800/50">
+                      <div className="bg-gradient-to-b from-gray-800/50 to-gray-900/30 backdrop-blur-xl rounded-lg p-4 space-y-4 border border-gray-800/50">
                         <h4 className="text-base font-semibold text-white flex items-center gap-2">
                           <span className="h-1 w-1 rounded-full bg-cyan-500"></span>
                           Online Presence
@@ -1097,7 +1128,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                     {/* Right Column */}
                     <div className="space-y-4">
                       {/* Company Information */}
-                      <div className="bg-gradient-to-b from-gray-900/50 to-black/30 backdrop-blur-xl rounded-lg p-4 space-y-4 border border-gray-800/50">
+                      <div className="bg-gradient-to-b from-gray-800/50 to-gray-900/30 backdrop-blur-xl rounded-lg p-4 space-y-4 border border-gray-800/50">
                         <h4 className="text-base font-semibold text-white flex items-center gap-2">
                           <span className="h-1 w-1 rounded-full bg-cyan-500"></span>
                           Company Information
@@ -1148,7 +1179,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
 
                       {/* Technologies */}
                       {selectedRow.Technologies && (
-                        <div className="bg-gradient-to-b from-gray-900/50 to-black/30 backdrop-blur-xl rounded-lg p-4 border border-gray-800/50">
+                        <div className="bg-gradient-to-b from-gray-800/50 to-gray-900/30 backdrop-blur-xl rounded-lg p-4 border border-gray-800/50">
                           <h4 className="text-base font-semibold text-white flex items-center gap-2 mb-3">
                             <span className="h-1 w-1 rounded-full bg-cyan-500"></span>
                             Technologies
@@ -1175,7 +1206,14 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
           </DialogContent>
         </Dialog>
 
-        <div className="flex items-center justify-between py-4">
+        {/* Analytics Modal */}
+        <AnalyticsModal
+          isOpen={isAnalyticsOpen}
+          onClose={() => setIsAnalyticsOpen(false)}
+          data={table.getRowModel().rows.map(row => row.original)}
+        />
+
+        <div className="flex items-center justify-between py-1 mt-1 px-1">
           <div className="flex-1 text-sm text-gray-400">
             {table.getFilteredSelectedRowModel().rows.length} of{" "}
             {table.getFilteredRowModel().rows.length} row(s) selected.

@@ -27,7 +27,7 @@ export default function RootLayout({
             <div className='gradient'/>
           </div>
           <main className="app">
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense fallback={<div className="min-h-screen w-full bg-[#1C1C1C] text-gray-400">Loading...</div>}>
               {children}
             </Suspense>
           </main>

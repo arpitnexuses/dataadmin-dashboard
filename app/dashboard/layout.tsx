@@ -6,7 +6,7 @@ export default function UserDashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-[#1C1C1C] px-1">
+    <div className="min-h-screen bg-[#1C1C1C]">
       <div className="w-full">{children}</div>
     </div>
   )

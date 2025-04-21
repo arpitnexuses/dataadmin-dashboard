@@ -10,12 +10,18 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart, PieChart, LineChart, Users, Building2, Globe, Code, Briefcase, DollarSign, X } from "lucide-react"
 import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart"
+import {
   BarChart as RechartsBarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
   PieChart as RechartsPieChart,
   Pie,
@@ -141,48 +147,91 @@ export function AnalyticsModal({ isOpen, onClose, data }: AnalyticsModalProps) {
             <Card className="bg-white border border-gray-200 h-full shadow-sm">
               <CardContent className="h-full p-6">
                 {cardData.data ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    {cardData.type === 'bar' ? (
-                      <RechartsBarChart data={cardData.data}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="name" stroke="#666" angle={-45} textAnchor="end" height={100} />
-                        <YAxis stroke="#666" />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Bar 
-                          dataKey="value" 
-                          fill={cardData.color} 
-                          radius={[6, 6, 0, 0]} 
-                        />
-                      </RechartsBarChart>
-                    ) : (
-                      <RechartsPieChart>
-                        <Pie
+                  <ChartContainer
+                    config={{
+                      value: {
+                        color: cardData.color,
+                        label: cardData.title
+                      }
+                    }}
+                    className="h-full"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      {cardData.type === 'bar' ? (
+                        <RechartsBarChart 
                           data={cardData.data}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={100}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
                         >
-                          {cardData.data.map((entry: any, index: number) => (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={PIE_COLORS[index % PIE_COLORS.length].color}
-                              style={{
-                                filter: `drop-shadow(0 0 8px ${PIE_COLORS[index % PIE_COLORS.length].color}80)`
-                              }}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<CustomTooltip />} />
-                      </RechartsPieChart>
-                    )}
-                  </ResponsiveContainer>
+                          <CartesianGrid 
+                            strokeDasharray="3 3" 
+                            className="stroke-border/50"
+                            vertical={false}
+                          />
+                          <XAxis 
+                            dataKey="name" 
+                            className="fill-muted-foreground text-xs"
+                            angle={-45} 
+                            textAnchor="end" 
+                            height={100}
+                            tick={{ fontSize: 12 }}
+                            interval={0}
+                          />
+                          <YAxis 
+                            className="fill-muted-foreground text-xs"
+                            tick={{ fontSize: 12 }}
+                            tickFormatter={(value) => value.toLocaleString()}
+                          />
+                          <ChartTooltip 
+                            content={<CustomTooltip />}
+                            cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                          />
+                          <Bar 
+                            dataKey="value" 
+                            fill={cardData.color}
+                            radius={[6, 6, 0, 0]}
+                            isAnimationActive={false}
+                            maxBarSize={60}
+                          />
+                        </RechartsBarChart>
+                      ) : (
+                        <RechartsPieChart>
+                          <Pie
+                            data={cardData.data}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            outerRadius={100}
+                            innerRadius={50}
+                            fill="#8884d8"
+                            dataKey="value"
+                            label={({ name, percent }) => `${truncateText(name)} ${(percent * 100).toFixed(0)}%`}
+                            isAnimationActive={false}
+                            paddingAngle={2}
+                          >
+                            {cardData.data.map((entry: any, index: number) => (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={PIE_COLORS[index % PIE_COLORS.length].color}
+                                stroke="white"
+                                strokeWidth={2}
+                              />
+                            ))}
+                          </Pie>
+                          <ChartTooltip 
+                            content={<CustomTooltip />}
+                            cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                          />
+                        </RechartsPieChart>
+                      )}
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <div className="w-16 h-16 rounded-full bg-gray-200 animate-pulse" />
+                    <div className="relative w-20 h-20">
+                      <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-[#FF6B6B] animate-spin"></div>
+                      <div className="absolute inset-2 rounded-full border-4 border-t-transparent border-[#4ECDC4] animate-spin" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="absolute inset-4 rounded-full border-4 border-t-transparent border-[#45B7D1] animate-spin" style={{ animationDelay: '0.4s' }}></div>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -193,12 +242,35 @@ export function AnalyticsModal({ isOpen, onClose, data }: AnalyticsModalProps) {
     )
   }
 
+  const standardizeTitle = (title: string) => {
+    if (!title) return '';
+    const upperTitle = title.toUpperCase();
+    
+    // Standardize CTO titles
+    if (upperTitle === 'CTO' || upperTitle === 'CHIEF TECHNOLOGY OFFICER') {
+      return 'CTO';
+    }
+    
+    // Standardize CIO titles
+    if (upperTitle === 'CIO' || upperTitle === 'CHIEF INFORMATION OFFICER') {
+      return 'CIO';
+    }
+
+    // Standardize CISO titles
+    if (upperTitle === 'CISO' || upperTitle === 'CHIEF INFORMATION SECURITY OFFICER') {
+      return 'CISO';
+    }
+    
+    return title;
+  };
+
   const calculateDistribution = (data: any[], field: string) => {
     const distribution: Record<string, number> = {}
     data.forEach(item => {
       const value = item[field]
       if (value) {
-        distribution[value] = (distribution[value] || 0) + 1
+        const standardizedValue = standardizeTitle(value);
+        distribution[standardizedValue] = (distribution[standardizedValue] || 0) + 1;
       }
     })
     return distribution
@@ -283,13 +355,26 @@ export function AnalyticsModal({ isOpen, onClose, data }: AnalyticsModalProps) {
     return values.reduce((a, b) => a + b, 0) / values.length
   }
 
+  const truncateText = (text: string, limit: number = 22) => {
+    if (!text) return '';
+    // Capitalize first letter and handle the rest
+    const capitalizedText = text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+    if (capitalizedText.length <= limit) return capitalizedText;
+    return capitalizedText.slice(0, limit) + '...';
+  };
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length > 0 && payload[0]?.value !== undefined) {
       return (
-        <div className="bg-[#1C1C1C]/90 border border-cyan-500/30 p-2 rounded-lg shadow-lg shadow-cyan-500/20">
-          <p className="text-cyan-400 font-medium">{label}</p>
-          <p className="text-white font-bold">{payload[0].value}</p>
-        </div>
+        <ChartTooltipContent
+          className="bg-background border border-border/50 shadow-xl p-3"
+          payload={[{
+            ...payload[0],
+            name: payload[0].name ? payload[0].name.charAt(0).toUpperCase() + payload[0].name.slice(1).toLowerCase() : ''
+          }]}
+          label={label ? label.charAt(0).toUpperCase() + label.slice(1).toLowerCase() : ''}
+          formatter={(value) => value.toLocaleString()}
+        />
       );
     }
     return null;
@@ -359,22 +444,56 @@ export function AnalyticsModal({ isOpen, onClose, data }: AnalyticsModalProps) {
                   </CardHeader>
                   <CardContent className="h-[calc(100%-60px)]">
                     {analytics?.title.topTitles ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsBarChart data={analytics?.title.topTitles}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                          <XAxis dataKey="name" stroke="#666" />
-                          <YAxis stroke="#666" />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar 
-                            dataKey="value" 
-                            fill="#FF6B6B" 
-                            radius={[6, 6, 0, 0]} 
-                          />
-                        </RechartsBarChart>
-                      </ResponsiveContainer>
+                      <ChartContainer
+                        config={{
+                          value: {
+                            color: "#FF6B6B",
+                            label: "Title Distribution"
+                          }
+                        }}
+                        className="h-full"
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsBarChart 
+                            data={analytics?.title.topTitles}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                          >
+                            <CartesianGrid 
+                              strokeDasharray="3 3" 
+                              className="stroke-border/50"
+                              vertical={false}
+                            />
+                            <XAxis 
+                              dataKey="name" 
+                              className="fill-muted-foreground text-xs"
+                              tick={{ fontSize: 12 }}
+                            />
+                            <YAxis 
+                              className="fill-muted-foreground text-xs"
+                              tick={{ fontSize: 12 }}
+                              tickFormatter={(value) => value.toLocaleString()}
+                            />
+                            <ChartTooltip 
+                              content={<CustomTooltip />}
+                              cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                            />
+                            <Bar 
+                              dataKey="value" 
+                              fill="#FF6B6B"
+                              radius={[6, 6, 0, 0]}
+                              isAnimationActive={false}
+                              maxBarSize={60}
+                            />
+                          </RechartsBarChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <div className="w-16 h-16 rounded-full bg-[#FF6B6B]/20" />
+                        <div className="relative w-20 h-20">
+                          <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-[#FF6B6B] animate-spin"></div>
+                          <div className="absolute inset-2 rounded-full border-4 border-t-transparent border-[#4ECDC4] animate-spin" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="absolute inset-4 rounded-full border-4 border-t-transparent border-[#45B7D1] animate-spin" style={{ animationDelay: '0.4s' }}></div>
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -395,31 +514,46 @@ export function AnalyticsModal({ isOpen, onClose, data }: AnalyticsModalProps) {
                   </CardHeader>
                   <CardContent className="h-[calc(100%-60px)]">
                     {analytics?.industry.topIndustries ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsPieChart>
-                          <Pie
-                            data={analytics?.industry.topIndustries}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={100}
-                            fill="#8884d8"
-                            dataKey="value"
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          >
-                            {analytics?.industry.topIndustries.map((entry: any, index: number) => (
-                              <Cell 
-                                key={`cell-${index}`} 
-                                fill={PIE_COLORS[index % PIE_COLORS.length].color}
-                                style={{
-                                  filter: `drop-shadow(0 0 8px ${PIE_COLORS[index % PIE_COLORS.length].color}80)`
-                                }}
-                              />
-                            ))}
-                          </Pie>
-                          <Tooltip content={<CustomTooltip />} />
-                        </RechartsPieChart>
-                      </ResponsiveContainer>
+                      <ChartContainer
+                        config={{
+                          value: {
+                            color: "#4ECDC4",
+                            label: "Industry Distribution"
+                          }
+                        }}
+                        className="h-full"
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsPieChart>
+                            <Pie
+                              data={analytics?.industry.topIndustries}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              outerRadius={100}
+                              innerRadius={50}
+                              fill="#8884d8"
+                              dataKey="value"
+                              label={({ name, percent }) => `${truncateText(name)} ${(percent * 100).toFixed(0)}%`}
+                              isAnimationActive={false}
+                              paddingAngle={2}
+                            >
+                              {analytics?.industry.topIndustries.map((entry: any, index: number) => (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={PIE_COLORS[index % PIE_COLORS.length].color}
+                                  stroke="white"
+                                  strokeWidth={2}
+                                />
+                              ))}
+                            </Pie>
+                            <ChartTooltip 
+                              content={<CustomTooltip />}
+                              cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                            />
+                          </RechartsPieChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <div className="w-16 h-16 rounded-full bg-[#4ECDC4]/20" />
@@ -443,19 +577,36 @@ export function AnalyticsModal({ isOpen, onClose, data }: AnalyticsModalProps) {
                   </CardHeader>
                   <CardContent className="h-[calc(100%-60px)]">
                     {analytics?.technologies.allTechnologies ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsBarChart data={analytics?.technologies.allTechnologies}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                          <XAxis dataKey="name" stroke="#666" angle={-45} textAnchor="end" height={100} />
-                          <YAxis stroke="#666" />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar 
-                            dataKey="value" 
-                            fill="#45B7D1" 
-                            radius={[6, 6, 0, 0]} 
-                          />
-                        </RechartsBarChart>
-                      </ResponsiveContainer>
+                      <ChartContainer
+                        config={{
+                          value: {
+                            color: "#45B7D1",
+                            label: "Technologies Distribution"
+                          }
+                        }}
+                        className="h-full"
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsBarChart data={analytics?.technologies.allTechnologies}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                            <XAxis 
+                              dataKey="name" 
+                              className="fill-muted-foreground"
+                              angle={-45} 
+                              textAnchor="end" 
+                              height={100} 
+                            />
+                            <YAxis className="fill-muted-foreground" />
+                            <ChartTooltip content={<CustomTooltip />} />
+                            <Bar 
+                              dataKey="value" 
+                              fill="#45B7D1"
+                              radius={[6, 6, 0, 0]}
+                              isAnimationActive={false}
+                            />
+                          </RechartsBarChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <div className="w-16 h-16 rounded-full bg-[#45B7D1]/20" />
@@ -479,19 +630,49 @@ export function AnalyticsModal({ isOpen, onClose, data }: AnalyticsModalProps) {
                   </CardHeader>
                   <CardContent className="h-[calc(100%-60px)]">
                     {analytics?.employeeSize.ranges ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsBarChart data={analytics?.employeeSize.ranges}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                          <XAxis dataKey="name" stroke="#666" />
-                          <YAxis stroke="#666" />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar 
-                            dataKey="value" 
-                            fill="#96CEB4" 
-                            radius={[6, 6, 0, 0]} 
-                          />
-                        </RechartsBarChart>
-                      </ResponsiveContainer>
+                      <ChartContainer
+                        config={{
+                          value: {
+                            color: "#96CEB4",
+                            label: "Employee Size Distribution"
+                          }
+                        }}
+                        className="h-full"
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsBarChart 
+                            data={analytics?.employeeSize.ranges}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                          >
+                            <CartesianGrid 
+                              strokeDasharray="3 3" 
+                              className="stroke-border/50"
+                              vertical={false}
+                            />
+                            <XAxis 
+                              dataKey="name" 
+                              className="fill-muted-foreground text-xs"
+                              tick={{ fontSize: 12 }}
+                            />
+                            <YAxis 
+                              className="fill-muted-foreground text-xs"
+                              tick={{ fontSize: 12 }}
+                              tickFormatter={(value) => value.toLocaleString()}
+                            />
+                            <ChartTooltip 
+                              content={<CustomTooltip />}
+                              cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                            />
+                            <Bar 
+                              dataKey="value" 
+                              fill="#96CEB4"
+                              radius={[6, 6, 0, 0]}
+                              isAnimationActive={false}
+                              maxBarSize={60}
+                            />
+                          </RechartsBarChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <div className="w-16 h-16 rounded-full bg-[#96CEB4]/20" />
@@ -515,19 +696,52 @@ export function AnalyticsModal({ isOpen, onClose, data }: AnalyticsModalProps) {
                   </CardHeader>
                   <CardContent className="h-[calc(100%-60px)]">
                     {analytics?.annualRevenue.ranges ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsBarChart data={analytics?.annualRevenue.ranges}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                          <XAxis dataKey="name" stroke="#666" angle={-45} textAnchor="end" height={100} />
-                          <YAxis stroke="#666" />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar 
-                            dataKey="value" 
-                            fill="#FF8C42" 
-                            radius={[6, 6, 0, 0]} 
-                          />
-                        </RechartsBarChart>
-                      </ResponsiveContainer>
+                      <ChartContainer
+                        config={{
+                          value: {
+                            color: "#FF8C42",
+                            label: "Revenue Range Distribution"
+                          }
+                        }}
+                        className="h-full"
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsBarChart 
+                            data={analytics?.annualRevenue.ranges}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                          >
+                            <CartesianGrid 
+                              strokeDasharray="3 3" 
+                              className="stroke-border/50"
+                              vertical={false}
+                            />
+                            <XAxis 
+                              dataKey="name" 
+                              className="fill-muted-foreground text-xs"
+                              angle={-45} 
+                              textAnchor="end" 
+                              height={100}
+                              tick={{ fontSize: 12 }}
+                            />
+                            <YAxis 
+                              className="fill-muted-foreground text-xs"
+                              tick={{ fontSize: 12 }}
+                              tickFormatter={(value) => value.toLocaleString()}
+                            />
+                            <ChartTooltip 
+                              content={<CustomTooltip />}
+                              cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                            />
+                            <Bar 
+                              dataKey="value" 
+                              fill="#FF8C42"
+                              radius={[6, 6, 0, 0]}
+                              isAnimationActive={false}
+                              maxBarSize={60}
+                            />
+                          </RechartsBarChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <div className="w-16 h-16 rounded-full bg-[#FF8C42]/20" />
@@ -551,31 +765,46 @@ export function AnalyticsModal({ isOpen, onClose, data }: AnalyticsModalProps) {
                   </CardHeader>
                   <CardContent className="h-[calc(100%-60px)]">
                     {analytics?.country.topCountries ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsPieChart>
-                          <Pie
-                            data={analytics?.country.topCountries}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={100}
-                            fill="#8884d8"
-                            dataKey="value"
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          >
-                            {analytics?.country.topCountries.map((entry: any, index: number) => (
-                              <Cell 
-                                key={`cell-${index}`} 
-                                fill={PIE_COLORS[(index + 2) % PIE_COLORS.length].color}
-                                style={{
-                                  filter: `drop-shadow(0 0 8px ${PIE_COLORS[(index + 2) % PIE_COLORS.length].color}80)`
-                                }}
-                              />
-                            ))}
-                          </Pie>
-                          <Tooltip content={<CustomTooltip />} />
-                        </RechartsPieChart>
-                      </ResponsiveContainer>
+                      <ChartContainer
+                        config={{
+                          value: {
+                            color: "#9B59B6",
+                            label: "Top Countries"
+                          }
+                        }}
+                        className="h-full"
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsPieChart>
+                            <Pie
+                              data={analytics?.country.topCountries}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              outerRadius={100}
+                              innerRadius={50}
+                              fill="#8884d8"
+                              dataKey="value"
+                              label={({ name, percent }) => `${truncateText(name)} ${(percent * 100).toFixed(0)}%`}
+                              isAnimationActive={false}
+                              paddingAngle={2}
+                            >
+                              {analytics?.country.topCountries.map((entry: any, index: number) => (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={PIE_COLORS[(index + 2) % PIE_COLORS.length].color}
+                                  stroke="white"
+                                  strokeWidth={2}
+                                />
+                              ))}
+                            </Pie>
+                            <ChartTooltip 
+                              content={<CustomTooltip />}
+                              cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                            />
+                          </RechartsPieChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <div className="w-16 h-16 rounded-full bg-[#9B59B6]/20" />

@@ -687,64 +687,35 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
           </div>
           <div className="flex flex-col gap-2 px-1">
             <div className="flex items-center gap-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                {userData?.dataFiles.map((file, index) => (
                   <Button
+                    key={file.id}
                     variant="outline"
                     size="sm"
-                    className="text-gray-300 border border-cyan-500/30 hover:border-cyan-500/50 bg-[#1C1C1C]/50 hover:bg-gray-900/50 flex items-center gap-2 w-fit relative group overflow-hidden"
+                    className={cn(
+                      "text-gray-300 border border-cyan-500/30 hover:border-cyan-500/50 bg-[#1C1C1C]/50 hover:bg-gray-900/50 flex items-center gap-2 relative group overflow-hidden whitespace-nowrap rounded-full px-4 py-1.5 transition-all duration-300",
+                      "hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/10",
+                      selectedFileIndex === index && "bg-gradient-to-r from-cyan-500/20 to-cyan-500/10 text-white border-cyan-500/50 shadow-lg shadow-cyan-500/10"
+                    )}
+                    onClick={() => {
+                      const url = new URL(window.location.href);
+                      url.searchParams.set('file', index.toString());
+                      window.location.href = url.toString();
+                    }}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <span className="text-xl font-medium tracking-wide relative z-10">{selectedFile.title}</span>
-                    <ChevronDown className="h-4 w-4 relative z-10 group-hover:text-cyan-400 transition-colors duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full"></div>
+                    <div className={cn(
+                      "h-2 w-2 rounded-full transition-all duration-300",
+                      selectedFileIndex === index ? "bg-cyan-400" : "bg-cyan-500/50"
+                    )}></div>
+                    <span className="relative z-10 font-medium tracking-wide uppercase">{file.title}</span>
+                    {selectedFileIndex === index && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-transparent rounded-full"></div>
+                    )}
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent 
-                  className="w-[300px] bg-gradient-to-b from-gray-800/95 to-gray-900/95 border border-cyan-500 shadow-lg shadow-cyan-500/20 backdrop-blur-xl"
-                  sideOffset={5}
-                  align="start"
-                  alignOffset={-4}
-                >
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent pointer-events-none"></div>
-                    <DropdownMenuLabel className="text-cyan-400 px-3 py-2 text-sm font-medium">Select File</DropdownMenuLabel>
-                  </div>
-                  <DropdownMenuSeparator className="bg-cyan-500/20" />
-                  <div className="max-h-[300px] overflow-auto py-1">
-                    {userData?.dataFiles.map((file, index) => (
-                      <DropdownMenuItem
-                        key={file.id}
-                        className={cn(
-                          "text-gray-300 hover:text-white focus:text-white px-3 py-2 cursor-pointer transition-all duration-200",
-                          "hover:bg-cyan-500/10 focus:bg-cyan-500/10",
-                          "focus:outline-none focus:ring-0",
-                          selectedFileIndex === index && "bg-cyan-500/10 text-white"
-                        )}
-                        onClick={() => {
-                          const url = new URL(window.location.href);
-                          url.searchParams.set('file', index.toString());
-                          window.location.href = url.toString();
-                        }}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-cyan-500/50"></div>
-                          <span>{file.title}</span>
-                        </div>
-                      </DropdownMenuItem>
-                    ))}
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-gray-300 border border-cyan-500/30 hover:border-cyan-500/50 bg-[#1C1C1C]/50 hover:bg-gray-900/50 flex items-center gap-2 relative group overflow-hidden"
-                onClick={() => setIsAnalyticsOpen(true)}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <BarChart className="h-4 w-4 relative z-10" />
-                <span className="relative z-10">Analytics</span>
-              </Button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -782,139 +753,16 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                 <Filter className="h-4 w-4" />
                 Advanced Filters {Object.keys(activeFilters).length > 0 && `(${Object.keys(activeFilters).length})`}
               </Button>
-              <DropdownMenu>
-                {/* <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-gray-300 border-gray-700 hover:bg-gray-800"
-                  >
-                    <Filter className="h-4 w-4 mr-2" />
-                    Filter
-                  </Button>
-                </DropdownMenuTrigger> */}
-                <DropdownMenuContent className="w-[300px] bg-gradient-to-b from-gray-800 to-gray-900/95 border-gray-700 p-3 backdrop-blur-sm">
-                  <div className="space-y-4">
-                    {generalFilters && generalFilters.titles && generalFilters.titles.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-300 mb-2">Common Titles</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {generalFilters.titles.map((title) => (
-                            <Button
-                              key={title}
-                              variant="outline"
-                              size="sm"
-                              className={cn(
-                                "text-gray-300 border-gray-700 hover:bg-gray-800",
-                                table.getColumn("Title")?.getFilterValue() === title && 
-                                "bg-white text-black hover:bg-white hover:text-black"
-                              )}
-                              onClick={() => table.getColumn("Title")?.setFilterValue(title)}
-                            >
-                              {title}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {generalFilters && generalFilters.industries && generalFilters.industries.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-300 mb-2">Common Industries</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {generalFilters.industries.map((industry) => (
-                            <Button
-                              key={industry}
-                              variant="outline"
-                              size="sm"
-                              className={cn(
-                                "text-gray-300 border-gray-700 hover:bg-gray-800",
-                                table.getColumn("Industry")?.getFilterValue() === industry && 
-                                "bg-white text-black hover:bg-white hover:text-black"
-                              )}
-                              onClick={() => table.getColumn("Industry")?.setFilterValue(industry)}
-                            >
-                              {industry}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {generalFilters && (
-                      <>
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-300 mb-2">Company Size</h4>
-                          <div className="grid grid-cols-2 gap-2">
-                            {generalFilters.employeeSizeRanges.map((range) => (
-                              <Button
-                                key={range.label}
-                                variant="outline"
-                                size="sm"
-                                className={cn(
-                                  "text-gray-300 border-gray-700 hover:bg-gray-800",
-                                  table.getColumn("Employees_Size")?.getFilterValue() === range.value && 
-                                  "bg-white text-black hover:bg-white hover:text-black"
-                                )}
-                                onClick={() => table.getColumn("Employees_Size")?.setFilterValue(range.value)}
-                              >
-                                {range.label}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-300 mb-2">Revenue</h4>
-                          <div className="grid grid-cols-2 gap-2">
-                            {generalFilters.revenueRanges.map((range) => (
-                              <Button
-                                key={range.label}
-                                variant="outline"
-                                size="sm"
-                                className={cn(
-                                  "text-gray-300 border-gray-700 hover:bg-gray-800",
-                                  table.getColumn("Annual_Revenue")?.getFilterValue() === range.value && 
-                                  "bg-white text-black hover:bg-white hover:text-black"
-                                )}
-                                onClick={() => table.getColumn("Annual_Revenue")?.setFilterValue(range.value)}
-                              >
-                                {range.label}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    <div className="pt-2 border-t border-gray-700">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-gray-300 border-gray-700 hover:bg-gray-800"
-                        onClick={() => {
-                          table.getColumn("Title")?.setFilterValue("")
-                          table.getColumn("Industry")?.setFilterValue("")
-                          table.getColumn("Employees_Size")?.setFilterValue("")
-                          table.getColumn("Annual_Revenue")?.setFilterValue("")
-                          setGlobalFilter("")
-                          table.resetColumnFilters()
-                          table.resetGlobalFilter()
-                          table.resetRowSelection()
-                          table.resetPagination()
-                          table.setPageIndex(0)
-                          const dropdownTrigger = document.querySelector('[data-state="open"]');
-                          if (dropdownTrigger) {
-                            (dropdownTrigger as HTMLElement).click();
-                          }
-                        }}
-                      >
-                        Clear Filters
-                      </Button>
-                    </div>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-gray-300 border border-cyan-500/30 hover:border-cyan-500/50 bg-[#1C1C1C]/50 hover:bg-gray-900/50 flex items-center gap-2 relative group overflow-hidden"
+                onClick={() => setIsAnalyticsOpen(true)}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <BarChart className="h-4 w-4 relative z-10" />
+                <span className="relative z-10">Analytics</span>
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button

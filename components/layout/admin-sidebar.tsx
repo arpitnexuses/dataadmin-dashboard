@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Users, LogOut, Settings } from "lucide-react"
+import { LayoutDashboard, Users, LogOut, Settings, FileText, CreditCard } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 
@@ -27,6 +27,16 @@ export function AdminSidebar() {
       href: "/admin/dashboard/users",
       icon: Users,
       label: "Manage Users",
+    },
+    {
+      href: "/admin/requests",
+      icon: FileText,
+      label: "Data Requests",
+    },
+    {
+      href: "/admin/credit-requests",
+      icon: CreditCard,
+      label: "Credit Requests",
     },
   ]
 

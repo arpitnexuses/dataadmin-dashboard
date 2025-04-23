@@ -51,11 +51,16 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog"
 import { Building2, Mail, Phone, Users, Globe, LinkedinIcon, DollarSign, Briefcase, MapPin } from "lucide-react"
 import { motion } from "framer-motion"
 import { BarChart, PieChart, LineChart } from "lucide-react"
 import { AnalyticsModal } from "./analytics-modal"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
+import { RowDetailsModal } from "./row-details-modal"
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -120,12 +125,14 @@ interface UserData {
     filename: string
     data: DataRow[]
   }>
+  credits: number
 }
 
 interface DataTableProps {
   selectedFileIndex: number
   activeFilters: Record<string, string[]>
   setIsFilterOpen: (isOpen: boolean) => void
+  allFilesData?: DataRow[]
 }
 
 // Add this helper function at the top with other functions
@@ -183,35 +190,90 @@ const revenueFilter: FilterFn<DataRow> = (row, columnId, value) => {
   }
 };
 
-export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }: DataTableProps) {
+// Keep only copy protection functions
+const preventCopy = (e: ClipboardEvent) => {
+  e.preventDefault();
+  return false;
+};
+
+const preventContextMenu = (e: React.MouseEvent) => {
+  e.preventDefault();
+  return false;
+};
+
+const preventSelection = (e: Event) => {
+  e.preventDefault();
+  return false;
+};
+
+export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, allFilesData }: DataTableProps) {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [rowSelection, setRowSelection] = useState({})
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
   const [globalFilter, setGlobalFilter] = useState("")
   const [selectedRow, setSelectedRow] = useState<DataRow | null>(null)
   const [isFilterOpen, setIsFilterOpenState] = useState(false)
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [showExportConfirm, setShowExportConfirm] = useState(false)
+  const [showNoSelectionWarning, setShowNoSelectionWarning] = useState(false)
+  const [showExportSuccess, setShowExportSuccess] = useState(false)
+  const [userCredits, setUserCredits] = useState<number>(0)
+  const [isRowDetailsOpen, setIsRowDetailsOpen] = useState(false)
+
+  // Add useEffect for auto-closing export success dialog
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    if (showExportSuccess) {
+      timeoutId = setTimeout(() => {
+        setShowExportSuccess(false);
+      }, 5000);
+    }
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [showExportSuccess]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("/api/user/data")
-        if (response.ok) {
-          const data = await response.json()
-          // console.log("Fetched data:", data)
-          setUserData(data)
+        // First fetch user data to get credits regardless of view
+        const userResponse = await fetch("/api/user/data")
+        if (userResponse.ok) {
+          const userData = await userResponse.json()
+          setUserCredits(userData.credits || 0)
+          
+          if (allFilesData) {
+            // If allFilesData is provided, use it but keep the credits from userData
+            setUserData({
+              title: "All Files",
+              logoUrl: "",
+              dataFiles: [{
+                id: "all-files",
+                title: "All Files",
+                filename: "all-files.csv",
+                data: allFilesData
+              }],
+              credits: userData.credits || 0  // Use the actual credits from userData
+            })
+          } else {
+            // If no allFilesData, use the complete userData
+            setUserData(userData)
+          }
         }
       } catch (error) {
-        // console.error("Error fetching user data:", error)
+        console.error("Error fetching data:", error)
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [])
+  }, [allFilesData])
 
   const columns = useMemo<ColumnDef<DataRow>[]>(() => {
     if (!userData?.dataFiles[selectedFileIndex]?.data[0]) {
@@ -226,23 +288,27 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
         id: "select",
         header: ({ table }) => (
           <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            checked={table.getIsAllPageRowsSelected()}
+            onCheckedChange={(value) => {
+              table.toggleAllPageRowsSelected(!!value)
+            }}
             aria-label="Select all"
             className="translate-y-[2px]"
           />
         ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-            className="translate-y-[2px]"
-          />
-        ),
+        cell: ({ row }) => {
+          return (
+            <div className="flex items-center justify-center">
+              <Checkbox
+                checked={row.getIsSelected()}
+                onCheckedChange={(value) => row.toggleSelected(!!value)}
+                aria-label="Select row"
+                onClick={(e) => e.stopPropagation()}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+            </div>
+          )
+        },
         enableSorting: false,
         enableHiding: false,
       }
@@ -274,7 +340,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-8 text-gray-300 hover:text-white hover:bg-gray-800 -ml-3 data-[state=open]:bg-gray-800 font-semibold tracking-wide"
+                  className="h-8 text-white hover:text-white hover:bg-gray-800 -ml-3 data-[state=open]:bg-gray-800 font-semibold tracking-wide"
                 >
                   <span>{columnKey.replace(/_/g, ' ')}</span>
                   <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
@@ -394,8 +460,8 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
           if (columnKey === "Email") {
             return (
               <div 
-                className="text-gray-300 h-6 flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[230px]"
-                title={value} // Show full text on hover
+                className="text-black h-6 flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[230px]"
+                title={value}
               >
                 {value}
               </div>
@@ -405,8 +471,8 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
           if (columnKey === "Website" || columnKey === "Person_Linkedin_Url" || columnKey === "Company_Linkedin_Url") {
             return (
               <div 
-                className="text-gray-300 max-w-[180px] truncate h-6 flex items-center"
-                title={value} // Show full text on hover
+                className="text-black max-w-[180px] truncate h-6 flex items-center"
+                title={value}
               >
                 {value}
               </div>
@@ -417,14 +483,14 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
           if (columnKey === "Company") {
             return (
               <div 
-                className="text-gray-300 h-6 flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]"
-                title={value} // Show full text on hover
+                className="text-black h-6 flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]"
+                title={value}
               >
                 {value}
               </div>
             );
           }
-          return <div className="text-gray-300 h-6 flex items-center">{value}</div>;
+          return <div className="text-black h-6 flex items-center">{value}</div>;
         },
       };
 
@@ -529,7 +595,25 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
       rowSelection,
       globalFilter,
     },
+    enableRowSelection: true,
+    enableMultiRowSelection: true,
   })
+
+  // Remove the pagination effect since we don't need it anymore
+  useEffect(() => {
+    setRowSelection({})
+  }, [])
+
+  // Keep only copy protection effect
+  useEffect(() => {
+    document.addEventListener('copy', preventCopy);
+    document.addEventListener('selectstart', preventSelection);
+    
+    return () => {
+      document.removeEventListener('copy', preventCopy);
+      document.removeEventListener('selectstart', preventSelection);
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -560,12 +644,92 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
     }
   };
 
+  const handleExport = async () => {
+    if (table.getSelectedRowModel().rows.length === 0) {
+      setShowExportConfirm(false)
+      setShowNoSelectionWarning(true)
+      return
+    }
+
+    if (userCredits < table.getSelectedRowModel().rows.length) {
+      alert(`Not enough credits! You need ${table.getSelectedRowModel().rows.length} credits but only have ${userCredits}`)
+      return
+    }
+
+    setExporting(true)
+    try {
+      // First deduct credits
+      const creditResponse = await fetch('/api/user/credits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          credits: -table.getSelectedRowModel().rows.length
+        }),
+      })
+
+      if (!creditResponse.ok) {
+        throw new Error('Failed to update credits')
+      }
+
+      // Get the selected row indices
+      const selectedIndices = table.getSelectedRowModel().rows.map(row => row.index)
+
+      // Then trigger the export
+      const exportResponse = await fetch('/api/user/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'selected',
+          selectedRecords: table.getSelectedRowModel().rows.length,
+          selectedIndices: selectedIndices
+        }),
+      })
+
+      if (!exportResponse.ok) {
+        throw new Error('Failed to export data')
+      }
+
+      // Get the blob from the response
+      const blob = await exportResponse.blob()
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'exported_data.xlsx'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      // Refresh user data to update credits
+      const userResponse = await fetch("/api/user/data")
+      if (userResponse.ok) {
+        const data = await userResponse.json()
+        setUserCredits(data.credits)
+        setUserData(data) // Update the entire user data to ensure UI is in sync
+      }
+
+      setShowExportSuccess(true)
+    } catch (error) {
+      console.error('Export error:', error)
+      alert('Failed to export data. Please try again.')
+    } finally {
+      setExporting(false)
+      setShowExportConfirm(false)
+    }
+  }
+
   if (loading) {
     return (
-      <Card className="border-none shadow-none w-full bg-[#1C1C1C] text-white">
+      <Card className="border-none shadow-none w-full bg-white">
         <CardContent className="p-8">
           <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-300"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-gray-600"></div>
           </div>
         </CardContent>
       </Card>
@@ -573,6 +737,281 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
   }
 
   if (!userData || !userData.dataFiles[selectedFileIndex]) {
+    // Check if we have allFilesData
+    if (allFilesData) {
+      const selectedFile = {
+        id: "all-files",
+        title: "All Files",
+        filename: "all-files.csv",
+        data: allFilesData
+      }
+      return (
+        <Card className="border-none shadow-none w-full bg-white text-black">
+          <CardContent 
+            className="p-1 select-none" 
+            onContextMenu={preventContextMenu}
+          >
+            {/* Logo and Header */}
+            <div className="flex flex-col mb-1 w-full">
+              
+              
+              
+              
+            </div>
+
+            {/* Filters Section */}
+            <div className="flex flex-col gap-2 mb-3 px-1">
+              {/* Top Row - Search and Actions */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 w-full max-w-sm">
+                  <div className="relative w-full">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search in all columns..."
+                      value={globalFilter ?? ""}
+                      onChange={(event) => setGlobalFilter(event.target.value)}
+                      className="pl-8 bg-white border-gray-200 text-black placeholder:text-gray-400 focus-visible:ring-gray-200"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const openDropdown = document.querySelector('[data-state="open"]');
+                      if (openDropdown) {
+                        (openDropdown as HTMLElement).click();
+                      }
+                      setIsFilterOpen(true);
+                    }}
+                    className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Filter className="h-4 w-4" />
+                    Advanced Filters {Object.keys(activeFilters).length > 0 && `(${Object.keys(activeFilters).length})`}
+                  </Button>
+                
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2"
+                    onClick={() => setShowExportConfirm(true)}
+                    disabled={!userData || userData.dataFiles[selectedFileIndex]?.data.length === 0 || exporting}
+                  >
+                    <Download className="h-4 w-4" />
+                    Export Selected
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-white border border-gray-200">
+              <div className="relative w-full overflow-auto">
+                <Table className="select-none">
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow 
+                        key={headerGroup.id} 
+                        className="hover:bg-gray-50 border-b border-gray-200 select-none"
+                      >
+                        {headerGroup.headers.map((header, index) => (
+                          <TableHead 
+                            key={header.id} 
+                            className={cn(
+                              "text-white bg-[#1c1c1c] border-b border-gray-200 px-2 py-1 select-none",
+                              index === 0 && "rounded-tl-lg",
+                              index === headerGroup.headers.length - 1 && "rounded-tr-lg"
+                            )}
+                          >
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody className="bg-white select-none">
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          data-state={row.getIsSelected() && "selected"}
+                          className="hover:bg-gray-50 border-b border-gray-200 cursor-pointer bg-white select-none"
+                          onClick={() => {
+                            setSelectedRow(row.original)
+                            setIsRowDetailsOpen(true)
+                          }}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell 
+                              key={cell.id} 
+                              className="text-black px-2 py-1 bg-white select-none"
+                              style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                            >
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className="h-16 text-center text-gray-400 bg-white select-none"
+                        >
+                          No results.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between py-1 mt-1 px-1">
+              <div className="flex-1 text-sm text-gray-500">
+                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                {table.getFilteredRowModel().rows.length} row(s) selected.
+              </div>
+            </div>
+
+            {/* Export Confirmation Dialog */}
+            <Dialog open={showExportConfirm} onOpenChange={setShowExportConfirm}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Confirm Export</DialogTitle>
+                  <DialogDescription>
+                    Please review the export details before proceeding
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {userCredits < table.getSelectedRowModel().rows.length ? (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Insufficient Credits</AlertTitle>
+                      <AlertDescription>
+                        You don't have enough credits to export {table.getSelectedRowModel().rows.length} records.
+                        Please contact your admin to get more credits.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Credit Information</AlertTitle>
+                      <AlertDescription>
+                        This export will cost {table.getSelectedRowModel().rows.length} credits.
+                        You currently have {userCredits} credits available.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <div className="flex justify-between">
+                      <span>Current Credits:</span>
+                      <span className="font-medium">{userCredits}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Export Cost:</span>
+                      <span className="font-medium text-red-500">-{table.getSelectedRowModel().rows.length}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <span>Remaining Credits:</span>
+                      <span className={`font-medium ${userCredits < table.getSelectedRowModel().rows.length ? 'text-red-500' : 'text-green-500'}`}>
+                        {userCredits - table.getSelectedRowModel().rows.length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowExportConfirm(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleExport}
+                    disabled={exporting || userCredits < table.getSelectedRowModel().rows.length}
+                    className="bg-black text-white hover:bg-black/90"
+                  >
+                    {exporting ? 'Exporting...' : 'Confirm Export'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={showNoSelectionWarning} onOpenChange={setShowNoSelectionWarning}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>No Records Selected</DialogTitle>
+                  <DialogDescription>
+                    Please select at least one record to export.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button 
+                    onClick={() => setShowNoSelectionWarning(false)}
+                    className="bg-black text-white hover:bg-black/90"
+                  >
+                    OK
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Export Success Dialog */}
+            <Dialog open={showExportSuccess} onOpenChange={setShowExportSuccess}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Export Successful</DialogTitle>
+                  <DialogDescription>
+                    Your data has been exported successfully.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <Alert className="bg-green-50 border-green-200">
+                    <AlertCircle className="h-4 w-4 text-green-600" />
+                    <AlertTitle className="text-green-800">Export Completed</AlertTitle>
+                    <AlertDescription className="text-green-700">
+                      The file has been downloaded to your computer. You can find it in your downloads folder.
+                    </AlertDescription>
+                  </Alert>
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <div className="flex justify-between">
+                      <span>Records Exported:</span>
+                      <span className="font-medium">{table.getSelectedRowModel().rows.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Credits Used:</span>
+                      <span className="font-medium text-red-500">-{table.getSelectedRowModel().rows.length}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <span>Remaining Credits:</span>
+                      <span className="font-medium text-green-500">{userCredits}</span>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button 
+                    onClick={() => setShowExportSuccess(false)}
+                    className="bg-black text-white hover:bg-black/90"
+                  >
+                    Close
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Row Details Modal */}
+            <RowDetailsModal 
+              isOpen={isRowDetailsOpen}
+              onClose={() => setIsRowDetailsOpen(false)}
+              rowData={selectedRow}
+            />
+          </CardContent>
+        </Card>
+      )
+    }
     return (
       <Card>
         <CardContent className="p-8">
@@ -586,138 +1025,18 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
 
   const selectedFile = userData.dataFiles[selectedFileIndex]
 
-  const exportToExcel = (selectedOnly: boolean = false) => {
-    const dataToExport = selectedOnly 
-      ? table.getSelectedRowModel().rows.map(row => row.original)
-      : selectedFile.data
-    
-    if (selectedOnly && dataToExport.length === 0) {
-      alert("Please select rows to export")
-      return
-    }
-
-    const ws = XLSX.utils.json_to_sheet(dataToExport)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Data')
-    XLSX.writeFile(wb, `${selectedFile.title}${selectedOnly ? '_selected' : ''}.xlsx`)
-  }
-
   return (
-    <Card className="border-none shadow-none w-full bg-[#1C1C1C] text-white transition-all duration-300 hover:shadow-lg hover:shadow-gray-900/20">
-      <CardContent className="p-1">
+    <Card className="border-none shadow-none w-full bg-white text-black">
+      <CardContent 
+        className="p-1 select-none" 
+        onContextMenu={preventContextMenu}
+      >
         {/* Logo and Header */}
         <div className="flex flex-col mb-1 w-full">
-          <div className="flex justify-between w-full items-center px-1">
-            <div className="relative w-40 h-12 transition-transform duration-300 hover:scale-105">
-              <img
-                src="https://cdn-nexlink.s3.us-east-2.amazonaws.com/Nexuses_logo_blue_(2)_3_721ee160-2cac-429c-af66-f55b7233f6ed.png"
-                alt="Nexuses Logo"
-                className="w-full h-full object-contain brightness-0 invert"
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="relative overflow-hidden text-gray-300 border-gray-700 hover:bg-gray-800/50 hover:text-white flex items-center gap-2 h-fit transition-all duration-300 hover:scale-105 hover:shadow-md hover:shadow-gray-900/20 group px-4 py-2 rounded-lg"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-800/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="flex items-center gap-2 relative z-10">
-                <LogOut className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:rotate-180" />
-                <span className="font-medium tracking-wide">Logout</span>
-              </div>
-            </Button>
-          </div>
-          <div className="relative w-full my-3 flex items-center justify-center overflow-hidden">
-            <motion.div
-              initial={{ width: "0%" }}
-              animate={{ width: "100%" }}
-              transition={{
-                duration: 1.2,
-                ease: [0.4, 0, 0.2, 1]
-              }}
-              className="relative w-full h-[2px]"
-            >
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{
-                  duration: 0.8,
-                  delay: 0.3
-                }}
-                className="absolute inset-0 z-40 h-[2px] w-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent"
-              />
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.75 }}
-                transition={{
-                  duration: 0.8,
-                  delay: 0.5
-                }}
-                className="absolute inset-0 z-30 h-[2px] w-full bg-gradient-to-r from-transparent via-cyan-500 to-transparent"
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 0.8, scale: 1 }}
-                transition={{
-                  duration: 1,
-                  delay: 0.2
-                }}
-                className="absolute -inset-[2px] z-20 blur-[12px] bg-cyan-500/50"
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 0.5, scale: 1 }}
-                transition={{
-                  duration: 1,
-                  delay: 0.2
-                }}
-                className="absolute -inset-[4px] z-10 blur-[20px] bg-cyan-400/30"
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 0.3, scale: 1 }}
-                transition={{
-                  duration: 1,
-                  delay: 0.2
-                }}
-                className="absolute -inset-[6px] z-0 blur-[30px] bg-cyan-300/20"
-              />
-            </motion.div>
-          </div>
-          <div className="flex flex-col gap-2 px-1">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                {userData?.dataFiles.map((file, index) => (
-                  <Button
-                    key={file.id}
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "text-gray-300 border border-cyan-500/30 hover:border-cyan-500/50 bg-[#1C1C1C]/50 hover:bg-gray-900/50 flex items-center gap-2 relative group overflow-hidden whitespace-nowrap rounded-full px-4 py-1.5 transition-all duration-300",
-                      "hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/10",
-                      selectedFileIndex === index && "bg-gradient-to-r from-cyan-500/20 to-cyan-500/10 text-white border-cyan-500/50 shadow-lg shadow-cyan-500/10"
-                    )}
-                    onClick={() => {
-                      const url = new URL(window.location.href);
-                      url.searchParams.set('file', index.toString());
-                      window.location.href = url.toString();
-                    }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full"></div>
-                    <div className={cn(
-                      "h-2 w-2 rounded-full transition-all duration-300",
-                      selectedFileIndex === index ? "bg-cyan-400" : "bg-cyan-500/50"
-                    )}></div>
-                    <span className="relative z-10 font-medium tracking-wide uppercase">{file.title}</span>
-                    {selectedFileIndex === index && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-transparent rounded-full"></div>
-                    )}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
+          
+          
+          
+          
         </div>
 
         {/* Filters Section */}
@@ -731,7 +1050,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                   placeholder="Search in all columns..."
                   value={globalFilter ?? ""}
                   onChange={(event) => setGlobalFilter(event.target.value)}
-                  className="pl-8 bg-[#1C1C1C] border-gray-700 text-white placeholder:text-gray-400 focus-visible:ring-gray-700"
+                  className="pl-8 bg-white border-gray-200 text-black placeholder:text-gray-400 focus-visible:ring-gray-200"
                 />
               </div>
             </div>
@@ -740,83 +1059,49 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  // Close any open dropdown menu
                   const openDropdown = document.querySelector('[data-state="open"]');
                   if (openDropdown) {
                     (openDropdown as HTMLElement).click();
                   }
-                  // Open the filter
                   setIsFilterOpen(true);
                 }}
-                className="text-gray-300 border-gray-700 hover:bg-gray-800 flex items-center gap-2"
+                className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2"
               >
                 <Filter className="h-4 w-4" />
                 Advanced Filters {Object.keys(activeFilters).length > 0 && `(${Object.keys(activeFilters).length})`}
               </Button>
+            
               <Button
                 variant="outline"
                 size="sm"
-                className="text-gray-300 border border-cyan-500/30 hover:border-cyan-500/50 bg-[#1C1C1C]/50 hover:bg-gray-900/50 flex items-center gap-2 relative group overflow-hidden"
-                onClick={() => setIsAnalyticsOpen(true)}
+                className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2"
+                onClick={() => setShowExportConfirm(true)}
+                disabled={!userData || userData.dataFiles[selectedFileIndex]?.data.length === 0 || exporting}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <BarChart className="h-4 w-4 relative z-10" />
-                <span className="relative z-10">Analytics</span>
+                <Download className="h-4 w-4" />
+                Export Selected
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-gray-300 border-gray-700 hover:bg-gray-800 flex items-center gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-[200px] bg-gradient-to-b from-gray-800 to-gray-900 border-gray-700">
-                  <DropdownMenuItem 
-                    className="text-gray-300 focus:bg-gray-800 focus:text-white"
-                    onClick={() => exportToExcel(false)}
-                  >
-                    Export All Rows
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-gray-300 focus:bg-gray-800 focus:text-white"
-                    onClick={() => exportToExcel(true)}
-                  >
-                    Export Selected Rows
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
-
-          {/* Action Buttons Row */}
-          {/* <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-gray-300 border border-cyan-500/30 hover:border-cyan-500/50 bg-black/50 hover:bg-gray-900/50 flex items-center gap-2"
-              onClick={() => setIsAnalyticsOpen(true)}
-            >
-              <BarChart className="h-4 w-4" />
-              Analytics
-            </Button>
-          </div> */}
         </div>
 
-        {/* Table Section */}
-        <div className="rounded-lg bg-[#1C1C1C] border border-gray-700">
+        <div className="rounded-lg bg-white border border-gray-200">
           <div className="relative w-full overflow-auto">
-            <Table>
+            <Table className="select-none">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="hover:bg-gray-900/50 border-b border-gray-700">
-                    {headerGroup.headers.map((header) => (
+                  <TableRow 
+                    key={headerGroup.id} 
+                    className="hover:bg-gray-50 border-b border-gray-200 select-none"
+                  >
+                    {headerGroup.headers.map((header, index) => (
                       <TableHead 
                         key={header.id} 
-                        className="text-gray-300 bg-gradient-to-b from-gray-700 to-[#1C1C1C] border-b border-gray-800 px-2 py-1 first:rounded-tl-lg last:rounded-tr-lg"
+                        className={cn(
+                          "text-white bg-[#1c1c1c] border-b border-gray-200 px-2 py-1 select-none",
+                          index === 0 && "rounded-tl-lg",
+                          index === headerGroup.headers.length - 1 && "rounded-tr-lg"
+                        )}
                       >
                         {header.isPlaceholder
                           ? null
@@ -829,17 +1114,24 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                   </TableRow>
                 ))}
               </TableHeader>
-              <TableBody>
+              <TableBody className="bg-white select-none">
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
-                      className="hover:bg-gray-900/50 border-b border-gray-700 cursor-pointer"
-                      onClick={() => setSelectedRow(row.original)}
+                      className="hover:bg-gray-50 border-b border-gray-200 cursor-pointer bg-white select-none"
+                      onClick={() => {
+                        setSelectedRow(row.original)
+                        setIsRowDetailsOpen(true)
+                      }}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="text-gray-300 px-2 py-1">
+                        <TableCell 
+                          key={cell.id} 
+                          className="text-black px-2 py-1 bg-white select-none"
+                          style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                        >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
@@ -849,7 +1141,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
                   <TableRow>
                     <TableCell
                       colSpan={columns.length}
-                      className="h-16 text-center text-gray-400"
+                      className="h-16 text-center text-gray-400 bg-white select-none"
                     >
                       No results.
                     </TableCell>
@@ -860,237 +1152,142 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen }:
           </div>
         </div>
 
-        {/* Row Details Modal */}
-        <Dialog open={!!selectedRow} onOpenChange={() => setSelectedRow(null)}>
-          <DialogContent className="bg-gradient-to-b from-gray-800 to-gray-900 border border-cyan-500 text-white max-w-3xl p-0 gap-0">
-            <div className="relative w-full">
-              {/* Header Section with Gradient Overlay */}
-              <div className="relative p-6 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent pointer-events-none"></div>
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold text-white tracking-tight">Contact Details</DialogTitle>
-                </DialogHeader>
-              </div>
-
-              {selectedRow && (
-                <div className="px-6 pb-6">
-                  {/* Header with Avatar */}
-                  <div className="flex items-start gap-6 pb-6 border-b border-gray-800/50">
-                    <div className="relative group">
-                      <div className="absolute inset-0 bg-cyan-500/20 rounded-full blur-lg group-hover:blur-xl transition-all duration-500 opacity-50"></div>
-                      <div className="h-16 w-16 rounded-full bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-cyan-500/50 flex items-center justify-center text-2xl font-bold text-white relative">
-                        {selectedRow.Last_Name ? `${selectedRow.First_Name[0]}${selectedRow.Last_Name[0]}` : selectedRow.First_Name[0]}
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="text-2xl font-semibold text-white tracking-tight">{`${selectedRow.First_Name} ${selectedRow.Last_Name}`}</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-base text-cyan-400 font-medium">{selectedRow.Title}</span>
-                        <span className="text-gray-500">•</span>
-                        <span className="text-base text-gray-400">{selectedRow.Company}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Two Column Layout with Enhanced Cards */}
-                  <div className="grid md:grid-cols-2 gap-4 mt-6">
-                    {/* Left Column */}
-                    <div className="space-y-4">
-                      {/* Contact Information */}
-                      <div className="bg-gradient-to-b from-gray-800/50 to-gray-900/30 backdrop-blur-xl rounded-lg p-4 space-y-4 border border-gray-800/50">
-                        <h4 className="text-base font-semibold text-white flex items-center gap-2">
-                          <span className="h-1 w-1 rounded-full bg-cyan-500"></span>
-                          Contact Information
-                        </h4>
-                        
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3 group">
-                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-red-500/10 to-red-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
-                              <Mail className="h-4 w-4 text-red-400" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500">Email</p>
-                              <a href={`mailto:${selectedRow.Email}`} className="text-sm text-white hover:text-cyan-400 transition-colors">{selectedRow.Email}</a>
-                            </div>
-                          </div>
-
-                          {selectedRow.Corporate_Phone && (
-                            <div className="flex items-center gap-3 group">
-                              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-500/10 to-orange-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
-                                <Phone className="h-4 w-4 text-orange-400" />
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500">Corporate Phone</p>
-                                <p className="text-sm text-white">{selectedRow.Corporate_Phone}</p>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex items-center gap-3 group">
-                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-pink-500/10 to-pink-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
-                              <MapPin className="h-4 w-4 text-pink-400" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500">Location</p>
-                              <p className="text-sm text-white">{selectedRow.Country}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Online Presence */}
-                      <div className="bg-gradient-to-b from-gray-800/50 to-gray-900/30 backdrop-blur-xl rounded-lg p-4 space-y-4 border border-gray-800/50">
-                        <h4 className="text-base font-semibold text-white flex items-center gap-2">
-                          <span className="h-1 w-1 rounded-full bg-cyan-500"></span>
-                          Online Presence
-                        </h4>
-                        
-                        <div className="space-y-3">
-                          {selectedRow.Website && (
-                            <div className="flex items-center gap-3 group">
-                              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
-                                <Globe className="h-4 w-4 text-cyan-400" />
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500">Website</p>
-                                <a href={selectedRow.Website} target="_blank" rel="noopener noreferrer" className="text-sm text-white hover:text-cyan-400 transition-colors">{selectedRow.Website}</a>
-                              </div>
-                            </div>
-                          )}
-
-                          {selectedRow.Person_Linkedin_Url && (
-                            <div className="flex items-center gap-3 group">
-                              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
-                                <LinkedinIcon className="h-4 w-4 text-blue-400" />
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500">LinkedIn Profile</p>
-                                <a href={selectedRow.Person_Linkedin_Url} target="_blank" rel="noopener noreferrer" className="text-sm text-white hover:text-cyan-400 transition-colors">View Profile</a>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right Column */}
-                    <div className="space-y-4">
-                      {/* Company Information */}
-                      <div className="bg-gradient-to-b from-gray-800/50 to-gray-900/30 backdrop-blur-xl rounded-lg p-4 space-y-4 border border-gray-800/50">
-                        <h4 className="text-base font-semibold text-white flex items-center gap-2">
-                          <span className="h-1 w-1 rounded-full bg-cyan-500"></span>
-                          Company Information
-                        </h4>
-                        
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3 group">
-                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
-                              <Building2 className="h-4 w-4 text-blue-400" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500">Company</p>
-                              <p className="text-sm text-white">{selectedRow.Company}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3 group">
-                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-green-500/10 to-green-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
-                              <Users className="h-4 w-4 text-green-400" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500">Company Size</p>
-                              <p className="text-sm text-white">{selectedRow.Employees_Size} employees</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3 group">
-                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
-                              <Briefcase className="h-4 w-4 text-purple-400" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500">Industry</p>
-                              <p className="text-sm text-white">{selectedRow.Industry}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3 group">
-                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
-                              <DollarSign className="h-4 w-4 text-yellow-400" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500">Annual Revenue</p>
-                              <p className="text-sm text-white">{selectedRow.Annual_Revenue}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Technologies */}
-                      {selectedRow.Technologies && (
-                        <div className="bg-gradient-to-b from-gray-800/50 to-gray-900/30 backdrop-blur-xl rounded-lg p-4 border border-gray-800/50">
-                          <h4 className="text-base font-semibold text-white flex items-center gap-2 mb-3">
-                            <span className="h-1 w-1 rounded-full bg-cyan-500"></span>
-                            Technologies
-                          </h4>
-                          <ScrollArea className="h-[100px]">
-                            <div className="flex flex-wrap gap-1.5 pr-4">
-                              {selectedRow.Technologies.split(',').map((tech, index) => (
-                                <Badge 
-                                  key={index} 
-                                  className="bg-gray-800/50 text-white hover:bg-gray-700/50 px-2 py-1 text-xs rounded transition-colors border border-gray-700/50"
-                                >
-                                  {tech.trim()}
-                                </Badge>
-                              ))}
-                            </div>
-                          </ScrollArea>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Analytics Modal */}
-        <AnalyticsModal
-          isOpen={isAnalyticsOpen}
-          onClose={() => setIsAnalyticsOpen(false)}
-          data={table.getRowModel().rows.map(row => row.original)}
-        />
-
         <div className="flex items-center justify-between py-1 mt-1 px-1">
-          <div className="flex-1 text-sm text-gray-400">
+          <div className="flex-1 text-sm text-gray-500">
             {table.getFilteredSelectedRowModel().rows.length} of{" "}
             {table.getFilteredRowModel().rows.length} row(s) selected.
           </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="text-gray-300 border-gray-700 hover:bg-gray-800 disabled:opacity-50"
-            >
-              Previous
-            </Button>
-            <div className="text-sm text-gray-400">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="text-gray-300 border-gray-700 hover:bg-gray-800 disabled:opacity-50"
-            >
-              Next
-            </Button>
-          </div>
         </div>
+
+        {/* Export Confirmation Dialog */}
+        <Dialog open={showExportConfirm} onOpenChange={setShowExportConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Export</DialogTitle>
+              <DialogDescription>
+                Please review the export details before proceeding
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {userCredits < table.getSelectedRowModel().rows.length ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Insufficient Credits</AlertTitle>
+                  <AlertDescription>
+                    You don't have enough credits to export {table.getSelectedRowModel().rows.length} records.
+                    Please contact your admin to get more credits.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Credit Information</AlertTitle>
+                  <AlertDescription>
+                    This export will cost {table.getSelectedRowModel().rows.length} credits.
+                    You currently have {userCredits} credits available.
+                  </AlertDescription>
+                </Alert>
+              )}
+              <div className="text-sm text-muted-foreground space-y-2">
+                <div className="flex justify-between">
+                  <span>Current Credits:</span>
+                  <span className="font-medium">{userCredits}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Export Cost:</span>
+                  <span className="font-medium text-red-500">-{table.getSelectedRowModel().rows.length}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span>Remaining Credits:</span>
+                  <span className={`font-medium ${userCredits < table.getSelectedRowModel().rows.length ? 'text-red-500' : 'text-green-500'}`}>
+                    {userCredits - table.getSelectedRowModel().rows.length}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowExportConfirm(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleExport}
+                disabled={exporting || userCredits < table.getSelectedRowModel().rows.length}
+                className="bg-black text-white hover:bg-black/90"
+              >
+                {exporting ? 'Exporting...' : 'Confirm Export'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showNoSelectionWarning} onOpenChange={setShowNoSelectionWarning}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>No Records Selected</DialogTitle>
+              <DialogDescription>
+                Please select at least one record to export.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button 
+                onClick={() => setShowNoSelectionWarning(false)}
+                className="bg-black text-white hover:bg-black/90"
+              >
+                OK
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Export Success Dialog */}
+        <Dialog open={showExportSuccess} onOpenChange={setShowExportSuccess}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Export Successful</DialogTitle>
+              <DialogDescription>
+                Your data has been exported successfully.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Alert className="bg-green-50 border-green-200">
+                <AlertCircle className="h-4 w-4 text-green-600" />
+                <AlertTitle className="text-green-800">Export Completed</AlertTitle>
+                <AlertDescription className="text-green-700">
+                  The file has been downloaded to your computer. You can find it in your downloads folder.
+                </AlertDescription>
+              </Alert>
+              <div className="text-sm text-muted-foreground space-y-2">
+                <div className="flex justify-between">
+                  <span>Records Exported:</span>
+                  <span className="font-medium">{table.getSelectedRowModel().rows.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Credits Used:</span>
+                  <span className="font-medium text-red-500">-{table.getSelectedRowModel().rows.length}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span>Remaining Credits:</span>
+                  <span className="font-medium text-green-500">{userCredits}</span>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                onClick={() => setShowExportSuccess(false)}
+                className="bg-black text-white hover:bg-black/90"
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Row Details Modal */}
+        <RowDetailsModal 
+          isOpen={isRowDetailsOpen}
+          onClose={() => setIsRowDetailsOpen(false)}
+          rowData={selectedRow}
+        />
       </CardContent>
     </Card>
   )

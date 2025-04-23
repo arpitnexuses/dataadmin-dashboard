@@ -406,7 +406,7 @@ export default function Filter({ isOpen, onClose, onApplyFilters, data }: Filter
           </div>
         </ScrollArea>
 
-        <div className="flex-none p-4 border-t border-gray-800">
+        <div className="flex-none p-4 border-t border-gray-800 mb-4">
           <div className="flex justify-between">
             <button
               onClick={clearFilters}

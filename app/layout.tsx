@@ -8,13 +8,15 @@ import { Suspense } from "react"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Admin & User Authentication System",
+  title: "Nexuses Database Service",
   description: "A full-stack authentication system with file upload functionality",
-    generator: 'v0.dev'
+  generator: 'v0.dev',
+  icons: {
+    icon: 'https://cdn-nexlink.s3.us-east-2.amazonaws.com/icons8-globe-94_559b9a52-8825-49f2-b168-f45c5d444dad.png'
+  }
 }
 
 export default function RootLayout({
-  
   children,
 }: {
   children: React.ReactNode
@@ -26,12 +28,11 @@ export default function RootLayout({
           <div className='main'>
             <div className='gradient'/>
           </div>
-          <main className="app w-full">
+          <main className="app">
             <Suspense fallback={<div className="min-h-screen w-full bg-[#1C1C1C] text-gray-400">Loading...</div>}>
               {children}
             </Suspense>
           </main>
-          <link rel="icon" href="/assets/images/logo.svg" sizes="any" />
         </ThemeProvider>
       </body>
     </html>

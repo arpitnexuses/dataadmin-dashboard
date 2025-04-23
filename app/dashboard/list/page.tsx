@@ -1,0 +1,207 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FileText } from "lucide-react"
+import { DataTable } from "@/components/user/data-table"
+import Filter from "@/app/components/Filter"
+
+interface File {
+  id: string
+  name: string
+  description: string
+  data: any[]
+}
+
+interface DataRow {
+  First_Name: string
+  Last_Name: string
+  Title: string
+  Company: string
+  Email: string
+  Corporate_Phone: string
+  Personal_Phone: string
+  Employees_Size: string
+  Industry: string
+  Person_Linkedin_Url: string
+  Website: string
+  Company_Linkedin_Url: string
+  Country: string
+  Technologies: string
+  Annual_Revenue: string
+}
+
+export default function ListPage() {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({})
+  const [files, setFiles] = useState<File[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("/api/user/data")
+        if (response.ok) {
+          const data = await response.json()
+          setFiles(data.dataFiles.map((file: any) => ({
+            id: file.id,
+            name: file.title,
+            description: file.filename.replace(/\.csv$/, ''),
+            data: file.data
+          })))
+        }
+      } catch (error) {
+        console.error("Error fetching files:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  const handleFileClick = (file: File) => {
+    setSelectedFile(file)
+  }
+
+  const handleApplyFilters = (filters: Record<string, string[]>) => {
+    setActiveFilters(filters)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-gray-600"></div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {!selectedFile ? (
+        <>
+          <h1 className="text-3xl font-bold">Files</h1>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {/* All Files Card */}
+            <Card 
+              className="group hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-blue-400 hover:border-blue-500 bg-white"
+              onClick={() => {
+                const allFilesData: File = {
+                  id: 'all-files',
+                  name: 'All Files',
+                  description: 'Combined data from all files',
+                  data: files.reduce<DataRow[]>((acc, file) => [...acc, ...file.data], [])
+                }
+                handleFileClick(allFilesData)
+              }}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="space-y-1">
+                  <CardTitle className="text-lg font-semibold text-blue-600 group-hover:text-blue-700">
+                    All Files
+                  </CardTitle>
+                  <p className="text-sm text-gray-500 line-clamp-2">
+                    Combined data from all files
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 bg-blue-50 p-2 rounded-lg">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-600">
+                    {files.reduce((acc, file) => acc + file.data.length, 0)} records
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="text-xs text-gray-500">Click to view all data</span>
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {new Date().toLocaleDateString()}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {files.map((file) => (
+              <Card 
+                key={file.id} 
+                className="group hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-400 hover:border-black/30 bg-white"
+                onClick={() => handleFileClick(file)}
+              >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg font-semibold text-black group-hover:text-black/80">
+                      {file.name}
+                    </CardTitle>
+                    <p className="text-sm text-gray-500 line-clamp-2">
+                      {file.description}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 bg-black/5 p-2 rounded-lg">
+                    <FileText className="h-5 w-5 text-black" />
+                    <span className="text-sm font-medium text-black">
+                      {file.data.length} records
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-black animate-pulse" />
+                      <span className="text-xs text-gray-500">Click to view details</span>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {new Date().toLocaleDateString()}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex flex-col space-y-2">
+            <button 
+              onClick={() => setSelectedFile(null)}
+              className="flex items-center gap-2 text-sm text-gray-600 hover:text-black transition-colors w-fit group"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="lucide lucide-arrow-left group-hover:-translate-x-1 transition-transform"
+              >
+                <path d="m12 19-7-7 7-7"/>
+                <path d="M19 12H5"/>
+              </svg>
+              Back to Files
+            </button>
+            <h1 className="text-3xl font-bold">{selectedFile.name}</h1>
+          </div>
+          <DataTable 
+            selectedFileIndex={selectedFile.id === 'all-files' ? 0 : files.findIndex(f => f.id === selectedFile.id)}
+            activeFilters={activeFilters}
+            setIsFilterOpen={setIsFilterOpen}
+            allFilesData={selectedFile.id === 'all-files' ? selectedFile.data : undefined}
+          />
+          <Filter
+            isOpen={isFilterOpen}
+            onClose={() => setIsFilterOpen(false)}
+            onApplyFilters={handleApplyFilters}
+            data={selectedFile.data}
+          />
+        </div>
+      )}
+    </div>
+  )
+} 

@@ -4,6 +4,7 @@ import { DataFile, type IDataFile } from "@/lib/models/dataFile"
 import { User, type IUser } from "@/lib/models/user"
 import { getCurrentUser } from "@/lib/auth"
 import mongoose from "mongoose"
+import { DataRequest } from "@/lib/models/dataRequest"
 
 interface PopulatedDataFile extends Omit<IDataFile, "_id"> {
   _id: mongoose.Types.ObjectId
@@ -34,6 +35,9 @@ export async function GET(request: NextRequest) {
 
     await connectToDatabase()
     
+    // Get user's data requests count
+    const requestCount = await DataRequest.countDocuments({ userId: session.id })
+
     // Find user by ID, handling potential invalid ObjectId
     let user: PopulatedUser | null = null
     try {
@@ -145,6 +149,8 @@ export async function GET(request: NextRequest) {
     // console.log("User data files before mapping:", JSON.stringify(user.dataFiles, null, 2))
     const response = {
       title: user.title || "Data Dashboard",
+      credits: user.credits || 0,
+      requestCount: requestCount || 0,
       dataFiles: user.dataFiles.map((file) => {
         // console.log("Processing file:", file.fileId._id.toString())
         // console.log("File data sample:", file.fileId.data?.[0])

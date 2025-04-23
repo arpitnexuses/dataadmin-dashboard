@@ -39,6 +39,7 @@ import { ChevronDown, MoreHorizontal, Upload } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { AddFileForm } from "./add-file-form"
 import Image from "next/image"
+import { AddCreditsDialog } from "./add-credits-dialog"
 
 interface User {
   _id: string
@@ -48,6 +49,7 @@ interface User {
   logoUrl?: string
   createdAt: string
   updatedAt: string
+  credits: number
   dataFiles: Array<{
     fileId: string
     title: string
@@ -65,6 +67,7 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [isAddCreditsDialogOpen, setIsAddCreditsDialogOpen] = useState(false)
 
   const fetchUsers = async () => {
     try {
@@ -130,6 +133,21 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
   const handleAddFileSuccess = () => {
     // Refresh the users list to show the new file
     fetchUsers()
+  }
+
+  const handleAddCredits = (userId: string) => {
+    setSelectedUserId(userId)
+    setIsAddCreditsDialogOpen(true)
+  }
+
+  const handleAddCreditsSuccess = (newCredits: number) => {
+    setUsers(prevUsers => 
+      prevUsers.map(user => 
+        user._id === selectedUserId 
+          ? { ...user, credits: newCredits } 
+          : user
+      )
+    )
   }
 
   const columns: ColumnDef<User>[] = [
@@ -204,6 +222,21 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
       cell: ({ row }) => row.getValue("title") || "-",
     },
     {
+      accessorKey: "credits",
+      header: "Credits",
+      cell: ({ row }) => {
+        const credits = row.getValue("credits") as number
+        return (
+          <div className="flex items-center gap-2">
+            <div className="font-medium">{credits}</div>
+            <Badge variant={credits > 0 ? "secondary" : "destructive"}>
+              {credits > 0 ? "Active" : "No Credits"}
+            </Badge>
+          </div>
+        )
+      },
+    },
+    {
       accessorKey: "dataFiles",
       header: "Files",
       cell: ({ row }) => {
@@ -247,32 +280,31 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
       cell: ({ row }) => new Date(row.getValue("createdAt")).toLocaleDateString(),
     },
     {
-      id: "actions",
+      accessorKey: "actions",
+      header: "Actions",
       cell: ({ row }) => {
         const user = row.original
-
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0 text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <span className="sr-only">Open menu</span>
+              <Button variant="ghost" className="h-8 w-8 p-0">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+              <DropdownMenuLabel className="text-zinc-400">Actions</DropdownMenuLabel>
               <DropdownMenuItem 
-                onClick={() => setSelectedUserId(user._id)}
-                className="text-zinc-300 hover:bg-zinc-800 focus:bg-zinc-800"
+                onClick={() => handleDeleteFile(user._id, user.dataFiles[0]?.fileId)}
+                className="text-red-400 hover:bg-zinc-800 focus:bg-zinc-800"
               >
-                <Upload className="mr-2 h-4 w-4" />
-                Add File
+                Delete File
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-zinc-800" />
-              <DropdownMenuItem
-                onClick={() => handleDeleteUser(user._id)}
-                className="text-red-500 hover:text-red-400 hover:bg-zinc-800 focus:bg-zinc-800"
+              <DropdownMenuItem 
+                onClick={() => handleAddCredits(user._id)}
+                className="text-green-400 hover:bg-zinc-800 focus:bg-zinc-800"
               >
-                Delete
+                Add Credits
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -325,71 +357,82 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
   }
 
   return (
-    <div className="rounded-md border border-zinc-800 bg-zinc-900">
-      <Table>
-        <TableHeader>
-          <TableRow className="border-zinc-800 bg-zinc-900 hover:bg-zinc-900">
-            {table.getHeaderGroups().map((headerGroup) => (
-              headerGroup.headers.map((header) => {
-                return (
-                  <TableHead key={header.id} className="text-zinc-400 bg-zinc-900 h-12">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                )
-              })
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() && "selected"}
-                className="border-zinc-800 hover:bg-zinc-900"
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="text-zinc-300">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
-            <TableRow className="border-zinc-800">
-              <TableCell colSpan={columns.length} className="h-24 text-center text-zinc-400">
-                No results.
-              </TableCell>
+    <>
+      <AddCreditsDialog
+        userId={selectedUserId || ""}
+        isOpen={isAddCreditsDialogOpen}
+        onClose={() => {
+          setIsAddCreditsDialogOpen(false)
+          setSelectedUserId(null)
+        }}
+        onSuccess={handleAddCreditsSuccess}
+      />
+      <div className="rounded-md border border-zinc-800 bg-zinc-900">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-zinc-800 bg-zinc-900 hover:bg-zinc-900">
+              {table.getHeaderGroups().map((headerGroup) => (
+                headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id} className="text-zinc-400 bg-zinc-900 h-12">
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  )
+                })
+              ))}
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
-      <div className="flex items-center justify-end space-x-2 p-4 bg-[#1C1C1C] border-t border-zinc-800">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-          className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-          className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
-        >
-          Next
-        </Button>
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                  className="border-zinc-800 hover:bg-zinc-900"
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="text-zinc-300">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow className="border-zinc-800">
+                <TableCell colSpan={columns.length} className="h-24 text-center text-zinc-400">
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+        <div className="flex items-center justify-end space-x-2 p-4 bg-[#1C1C1C] border-t border-zinc-800">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+            className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+            className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
+          >
+            Next
+          </Button>
+        </div>
       </div>
-    </div>
+    </>
   )
 })
 

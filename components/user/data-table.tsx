@@ -714,6 +714,9 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
         setUserData(data) // Update the entire user data to ensure UI is in sync
       }
 
+      // Clear row selection after successful export
+      table.resetRowSelection()
+      
       setShowExportSuccess(true)
     } catch (error) {
       console.error('Export error:', error)

@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { FileText, FileQuestion, Database } from "lucide-react"
+import { FileText, FileQuestion, Database, Mail, Phone, CreditCard, FolderOpen } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "@/components/ui/charts"
 import { PieChart, Pie, Cell, Legend } from "@/components/ui/charts"
@@ -21,6 +21,8 @@ interface UserData {
   totalFiles: number
   requestCount: number
   totalRecords: number
+  totalEmails: number
+  totalPhones: number
   fileAnalytics: {
     industries: { name: string; value: number }[]
     countries: { name: string; value: number }[]
@@ -56,6 +58,8 @@ export default function DashboardPage() {
         const industryCounts: { [key: string]: number } = {}
         const countryCounts: { [key: string]: number } = {}
         const technologyCounts: { [key: string]: number } = {}
+        let totalEmails = 0
+        let totalPhones = 0
 
         // Title abbreviation mapping
         const titleAbbreviations: { [key: string]: string } = {
@@ -72,6 +76,16 @@ export default function DashboardPage() {
 
         data.dataFiles?.forEach((file: any) => {
           file.data?.forEach((record: any) => {
+            // Count emails separately
+            if (record.email || record.Email || record.EMAIL) {
+              totalEmails++
+            }
+            
+            // Count phone numbers separately - only if Personal_Phone exists and is not "-"
+            if (record.Personal_Phone && record.Personal_Phone !== "-") {
+              totalPhones++
+            }
+
             // Process titles with abbreviations
             let title = record.title || record.Title || record.TITLE || "Other"
             title = titleAbbreviations[title] || title
@@ -125,6 +139,8 @@ export default function DashboardPage() {
           totalFiles: data.dataFiles?.length || 0,
           requestCount: data.requestCount || 0,
           totalRecords: totalRecords,
+          totalEmails: totalEmails,
+          totalPhones: totalPhones,
           fileAnalytics: {
             industries: industries,
             countries: countries,
@@ -288,79 +304,88 @@ export default function DashboardPage() {
       </div>
       
       {/* Top Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Files Card */}
-        <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total Files</p>
-              <h3 className="text-3xl font-bold mt-1 text-gray-800">{formatNumber(userData?.totalFiles || 0)}</h3>
-            </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Files</CardTitle>
             <div className="bg-green-100 p-3 rounded-full">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+              <FolderOpen className="h-4 w-4 text-green-600" />
             </div>
-          </div>
-          <div className="mt-4">
-            <p className="text-sm text-gray-500">Files uploaded to your account</p>
-          </div>
-        </div>
-
-        {/* Total Records Card */}
-        <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total Records</p>
-              <h3 className="text-3xl font-bold mt-1 text-gray-800">{formatNumber(userData?.totalRecords || 0)}</h3>
-            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-800">{userData?.totalFiles || 0}</div>
+            <p className="text-xs text-gray-500">Files in your database</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Records</CardTitle>
             <div className="bg-purple-100 p-3 rounded-full">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
+              <Database className="h-4 w-4 text-purple-600" />
             </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-800">{formatNumber(userData?.totalRecords || 0)}</div>
+            <p className="text-xs text-gray-500">Total records across all files</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-blue-600 to-blue-800 text-white relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-200">
+          {/* Shining Animation */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shine"></div>
           </div>
-          <div className="mt-4">
-            <p className="text-sm text-gray-500">Total data records across all files</p>
-          </div>
-        </div>
-
-        {/* Request Count Card */}
-        <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Request Count</p>
-              <h3 className="text-3xl font-bold mt-1 text-gray-800">{userData?.requestCount || 0}</h3>
-            </div>
-            <div className="bg-orange-100 p-3 rounded-full">
-              <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </div>
-          </div>
-          <div className="mt-4">
-            <p className="text-sm text-gray-500">Total number of requests made</p>
-          </div>
-        </div>
-
-        {/* Credits Card - More Prominent */}
-        <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform duration-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-blue-100">Available Credits</p>
-              <h3 className="text-3xl font-bold mt-1">{formatNumber(userData?.credits || 0)}</h3>
-            </div>
+          
+          {/* Ribbon Element */}
+          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/20 transform rotate-45 translate-x-12 -translate-y-12"></div>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-400/10 transform rotate-45 translate-x-8 -translate-y-8"></div>
+          
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-blue-100">Available Credits</CardTitle>
             <div className="bg-blue-500/20 p-3 rounded-full">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <CreditCard className="h-4 w-4 text-blue-200" />
             </div>
-          </div>
-          <div className="mt-4">
-            <p className="text-sm text-blue-100">Credits remaining for data exports</p>
-          </div>
-        </div>
+          </CardHeader>
+          <CardContent className="relative z-10">
+            <div className="text-4xl font-bold">{userData?.credits || 0}</div>
+            <p className="text-xs text-blue-100">Credits available for use</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Emails</CardTitle>
+            <div className="bg-orange-100 p-3 rounded-full">
+              <Mail className="h-4 w-4 text-orange-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-800">{formatNumber(userData?.totalEmails || 0)}</div>
+            <p className="text-xs text-gray-500">Total email addresses in database</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Phone Numbers</CardTitle>
+            <div className="bg-pink-100 p-3 rounded-full">
+              <Phone className="h-4 w-4 text-pink-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-800">{formatNumber(userData?.totalPhones || 0)}</div>
+            <p className="text-xs text-gray-500">Total phone numbers in database</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Data Requests</CardTitle>
+            <div className="bg-indigo-100 p-3 rounded-full">
+              <FileQuestion className="h-4 w-4 text-indigo-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-800">{userData?.requestCount || 0}</div>
+            <p className="text-xs text-gray-500">Total data requests made</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Analytics Charts */}
@@ -377,7 +402,7 @@ export default function DashboardPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart 
                     data={getTop6Titles()}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                    margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
                     onClick={() => setShowAllTitles(true)}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
@@ -422,7 +447,7 @@ export default function DashboardPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart 
                     data={userData?.fileAnalytics.revenueSize}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                    margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
@@ -855,5 +880,28 @@ export default function DashboardPage() {
       </div>
     </div>
   )
+}
+
+// Add this at the end of the file, before the last closing brace
+const shineAnimation = `
+  @keyframes shine {
+    0% {
+      transform: translateX(-100%) rotate(45deg);
+    }
+    100% {
+      transform: translateX(100%) rotate(45deg);
+    }
+  }
+
+  .animate-shine {
+    animation: shine 2s infinite;
+  }
+`
+
+// Add the animation styles to the document
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style')
+  style.textContent = shineAnimation
+  document.head.appendChild(style)
 }
 

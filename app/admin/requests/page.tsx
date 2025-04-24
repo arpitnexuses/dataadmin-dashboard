@@ -118,14 +118,6 @@ export default function RequestsPage() {
       <div className="flex-1 space-y-6 p-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-white">Data Requests</h1>
-          <div className="flex gap-2">
-            <Button variant="outline" className="text-white border-zinc-700 hover:bg-zinc-800">
-              Export
-            </Button>
-            <Button variant="outline" className="text-white border-zinc-700 hover:bg-zinc-800">
-              Filter
-            </Button>
-          </div>
         </div>
 
         <Card className="bg-zinc-900 border-zinc-800">

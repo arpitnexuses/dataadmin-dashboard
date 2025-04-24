@@ -40,6 +40,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AddFileForm } from "./add-file-form"
 import Image from "next/image"
 import { AddCreditsDialog } from "./add-credits-dialog"
+import { DeleteUserDialog } from "./delete-user-dialog"
 
 interface User {
   _id: string
@@ -68,6 +69,8 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [isAddCreditsDialogOpen, setIsAddCreditsDialogOpen] = useState(false)
+  const [isDeleteUserDialogOpen, setIsDeleteUserDialogOpen] = useState(false)
+  const [selectedUserEmail, setSelectedUserEmail] = useState<string>("")
 
   const fetchUsers = async () => {
     try {
@@ -98,11 +101,17 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
         method: "DELETE",
       })
 
-      if (response.ok) {
-        setUsers((prevUsers) => prevUsers.filter((user) => user._id !== userId))
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to delete user")
       }
+
+      // Update the users state immediately
+      setUsers((prevUsers) => prevUsers.filter((user) => user._id !== userId))
+      return true
     } catch (error) {
       console.error("Error deleting user:", error)
+      throw error
     }
   }
 
@@ -148,6 +157,12 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
           : user
       )
     )
+  }
+
+  const handleDeleteUserClick = (userId: string, email: string) => {
+    setSelectedUserId(userId)
+    setSelectedUserEmail(email)
+    setIsDeleteUserDialogOpen(true)
   }
 
   const columns: ColumnDef<User>[] = [
@@ -294,17 +309,17 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
             <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
               <DropdownMenuLabel className="text-zinc-400">Actions</DropdownMenuLabel>
               <DropdownMenuItem 
-                onClick={() => handleDeleteFile(user._id, user.dataFiles[0]?.fileId)}
-                className="text-red-400 hover:bg-zinc-800 focus:bg-zinc-800"
-              >
-                Delete File
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-zinc-800" />
-              <DropdownMenuItem 
                 onClick={() => handleAddCredits(user._id)}
                 className="text-green-400 hover:bg-zinc-800 focus:bg-zinc-800"
               >
                 Add Credits
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-zinc-800" />
+              <DropdownMenuItem 
+                onClick={() => handleDeleteUserClick(user._id, user.email)}
+                className="text-red-400 hover:bg-zinc-800 focus:bg-zinc-800"
+              >
+                Delete User
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -366,6 +381,30 @@ export const UserList = forwardRef<UserListRef>((props, ref) => {
           setSelectedUserId(null)
         }}
         onSuccess={handleAddCreditsSuccess}
+      />
+      <DeleteUserDialog
+        userId={selectedUserId || ""}
+        userEmail={selectedUserEmail}
+        isOpen={isDeleteUserDialogOpen}
+        onClose={() => {
+          setIsDeleteUserDialogOpen(false)
+          setSelectedUserId(null)
+          setSelectedUserEmail("")
+        }}
+        onSuccess={async () => {
+          if (selectedUserId) {
+            try {
+              // Update local state first for immediate UI feedback
+              setUsers((prevUsers) => prevUsers.filter((user) => user._id !== selectedUserId))
+              // Then refresh from server to ensure consistency
+              await fetchUsers()
+            } catch (error) {
+              console.error("Error in deletion process:", error)
+              // If there's an error, refresh the table to ensure correct state
+              await fetchUsers()
+            }
+          }
+        }}
       />
       <div className="rounded-md border border-zinc-800 bg-zinc-900">
         <Table>

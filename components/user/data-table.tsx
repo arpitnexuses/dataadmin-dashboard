@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Download, LogOut } from "lucide-react"
+import { Download, LogOut, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -32,6 +32,7 @@ import {
   Cell,
   FilterFn,
   FilterFnOption,
+  VisibilityState,
 } from "@tanstack/react-table"
 import { Input } from "@/components/ui/input"
 import {
@@ -83,19 +84,19 @@ const getColumnColor = (value: string, columnKey: string) => {
       baseHue = Math.abs(hash % 30) + 0; // Warm oranges and reds (0-30)
       break;
     case 'Title':
-      baseHue = Math.abs(hash % 360); // Full color spectrum for titles
+      baseHue = Math.abs(hash % 60) + 180; // Blues (180-240)
       break;
     case 'Country':
-      baseHue = Math.abs(hash % 30) + 200; // Cool blues (200-230)
+      baseHue = Math.abs(hash % 30) + 270; // Purples (270-300)
       break;
     case 'Technologies':
-      baseHue = Math.abs(hash % 30) + 60; // Happy yellows (60-90)
+      baseHue = Math.abs(hash % 60) + 90; // Greens (90-150)
       break;
     default:
       baseHue = Math.abs(hash % 360);
   }
   
-  return `hsl(${baseHue}, 85%, 35%)`; // Higher saturation and medium lightness for happy colors
+  return `hsl(${baseHue}, 70%, 45%)`; // Medium saturation and lightness for subtle but noticeable colors
 }
 
 interface DataRow {
@@ -222,6 +223,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
   const [showExportSuccess, setShowExportSuccess] = useState(false)
   const [userCredits, setUserCredits] = useState<number>(0)
   const [isRowDetailsOpen, setIsRowDetailsOpen] = useState(false)
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
 
   // Add useEffect for auto-closing export success dialog
   useEffect(() => {
@@ -340,28 +342,28 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-8 text-white hover:text-white hover:bg-gray-800 -ml-3 data-[state=open]:bg-gray-800 font-semibold tracking-wide"
+                  className="h-8 -ml-3 data-[state=open]:bg-gray-100 font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100/50 tracking-wide text-sm"
                 >
                   <span>{columnKey.replace(/_/g, ' ')}</span>
-                  <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                  <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="bg-gray-900 border-gray-800">
-                <DropdownMenuLabel className="text-gray-300">Sort</DropdownMenuLabel>
+              <DropdownMenuContent align="start" className="bg-white border border-gray-200 shadow-lg rounded-md">
+                <DropdownMenuLabel className="text-sm text-gray-500 font-normal">Sort</DropdownMenuLabel>
                 <DropdownMenuItem 
                   onClick={() => column.toggleSorting(false)}
-                  className="text-gray-300 hover:bg-gray-800 focus:bg-gray-800"
+                  className="text-sm hover:bg-gray-50 focus:bg-gray-50 cursor-pointer"
                 >
-                  Asc
+                  Ascending
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => column.toggleSorting(true)}
-                  className="text-gray-300 hover:bg-gray-800 focus:bg-gray-800"
+                  className="text-sm hover:bg-gray-50 focus:bg-gray-50 cursor-pointer"
                 >
-                  Desc
+                  Descending
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-gray-800" />
-                <DropdownMenuLabel className="text-gray-300">Filter</DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-gray-100" />
+                <DropdownMenuLabel className="text-sm text-gray-500 font-normal">Filter</DropdownMenuLabel>
                 <div className="p-2">
                   <Input
                     placeholder={`Filter ${columnKey.replace(/_/g, ' ')}...`}
@@ -369,7 +371,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                     onChange={(event) =>
                       column.setFilterValue(event.target.value)
                     }
-                    className="h-8 w-full bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus-visible:ring-gray-700"
+                    className="h-8 w-full border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-blue-500 focus-visible:ring-opacity-30 focus-visible:border-blue-500 text-sm"
                   />
                 </div>
               </DropdownMenuContent>
@@ -388,17 +390,15 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
               const remainingCount = techs.length - MAX_VISIBLE;
               
               return (
-                <div className="flex items-center gap-1.5 max-w-[350px] h-6">
+                <div className="flex items-center gap-1.5 max-w-[350px]">
                   {techs.slice(0, MAX_VISIBLE).map((tech, index) => (
                     <div 
                       key={index}
-                      className="px-2 py-0.5 rounded-md text-xs whitespace-nowrap"
+                      className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap border"
                       style={{ 
-                        backgroundColor: getColumnColor(tech, columnKey),
-                        color: 'white',
-                        fontWeight: '500',
-                        fontSize: '0.75rem',
-                        lineHeight: '1rem',
+                        backgroundColor: `${getColumnColor(tech, columnKey)}10`, // Use 10% opacity
+                        color: getColumnColor(tech, columnKey),
+                        borderColor: `${getColumnColor(tech, columnKey)}30`, // 30% opacity border
                       }}
                     >
                       {tech}
@@ -406,7 +406,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                   ))}
                   {remainingCount > 0 && (
                     <div 
-                      className="px-2 py-0.5 rounded-md text-xs whitespace-nowrap bg-gray-700/50 text-gray-300"
+                      className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap bg-gray-50 text-gray-500 border border-gray-200"
                       title={techs.slice(MAX_VISIBLE).join(', ')} // Show remaining on hover
                     >
                       +{remainingCount}
@@ -420,31 +420,28 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
             if (columnKey === "Title") {
               return (
                 <div 
-                  className="inline-flex items-center h-6 whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]"
-                  style={{ 
-                    color: 'text-gray-300',
-                    fontWeight: '500',
-                    fontSize: '0.875rem',
-                    lineHeight: '1rem',
-                  }}
+                  className="inline-flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]"
                   title={value} // Show full text on hover
                 >
-                  <span className="mr-1.5 text-4xl leading-none" style={{ color: getColumnColor(value, columnKey) }}>•</span>
-                  {value}
+                  <div 
+                    className="w-2 h-2 rounded-full mr-2 flex-shrink-0"
+                    style={{ backgroundColor: getColumnColor(value, columnKey) }}
+                  />
+                  <span className="text-sm text-gray-700 font-medium truncate">
+                    {value}
+                  </span>
                 </div>
               );
             }
 
+            // Industry, Country and other badge columns
             return (
               <div 
-                className="px-3 py-1.5 rounded-md inline-block max-w-[200px] h-7"
+                className="px-2 py-0.5 rounded-md inline-block max-w-[200px] text-xs font-medium border"
                 style={{ 
-                  backgroundColor: bgColor,
-                  color: 'white',
-                  fontWeight: '500',
-                  fontSize: '0.875rem',
-                  lineHeight: '1rem',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  backgroundColor: `${bgColor}10`, // Use 10% opacity for background
+                  color: bgColor,
+                  borderColor: `${bgColor}30`, // 30% opacity border
                   textOverflow: 'ellipsis',
                   overflow: 'hidden',
                   whiteSpace: 'nowrap'
@@ -589,11 +586,13 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
       employeeSize: employeeSizeFilter,
       revenue: revenueFilter,
     },
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       sorting,
       columnFilters,
       rowSelection,
       globalFilter,
+      columnVisibility,
     },
     enableRowSelection: true,
     enableMultiRowSelection: true,
@@ -768,12 +767,12 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 w-full max-w-sm">
                   <div className="relative w-full">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                     <Input
                       placeholder="Search in all columns..."
                       value={globalFilter ?? ""}
                       onChange={(event) => setGlobalFilter(event.target.value)}
-                      className="pl-8 bg-white border-gray-200 text-black placeholder:text-gray-400 focus-visible:ring-gray-200"
+                      className="pl-9 py-2 h-10 bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-blue-500 focus-visible:ring-opacity-30 focus-visible:border-blue-500 rounded-md"
                     />
                   </div>
                 </div>
@@ -788,16 +787,121 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                       }
                       setIsFilterOpen(true);
                     }}
-                    className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2"
+                    className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2 h-10 rounded-md"
                   >
                     <Filter className="h-4 w-4" />
                     Advanced Filters {Object.keys(activeFilters).length > 0 && `(${Object.keys(activeFilters).length})`}
                   </Button>
                 
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2 h-10 rounded-md"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Columns
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg rounded-md w-56">
+                      <DropdownMenuLabel className="text-sm text-gray-500 font-normal">Toggle Columns</DropdownMenuLabel>
+                      <DropdownMenuSeparator className="bg-gray-100" />
+                      
+                      {/* Quick selection options */}
+                      <div className="p-2 flex flex-col gap-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium text-gray-500">Presets</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 text-xs border-gray-200 text-gray-700"
+                            onClick={() => {
+                              // Show only essential columns (customize this list as needed)
+                              const essentialColumns = ["First_Name", "Last_Name", "Email", "Company", "Title", "Country"];
+                              const newVisibility: VisibilityState = {};
+                              
+                              // First hide all columns except select
+                              table.getAllLeafColumns().forEach(column => {
+                                if (column.id !== "select") {
+                                  newVisibility[column.id] = false;
+                                }
+                              });
+                              
+                              // Then show only essential columns
+                              essentialColumns.forEach(column => {
+                                newVisibility[column] = true;
+                              });
+                              
+                              table.setColumnVisibility(newVisibility);
+                            }}
+                          >
+                            Essential Only
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 text-xs border-gray-200 text-gray-700"
+                            onClick={() => {
+                              const newVisibility: VisibilityState = {};
+                              table.getAllLeafColumns().forEach(column => {
+                                if (column.id !== "select") {
+                                  newVisibility[column.id] = true;
+                                }
+                              });
+                              table.setColumnVisibility(newVisibility);
+                            }}
+                          >
+                            Show All
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 text-xs border-gray-200 text-gray-700"
+                            onClick={() => {
+                              const newVisibility: VisibilityState = {};
+                              table.getAllLeafColumns().forEach(column => {
+                                if (column.id !== "select") {
+                                  newVisibility[column.id] = false;
+                                }
+                              });
+                              table.setColumnVisibility(newVisibility);
+                            }}
+                          >
+                            Hide All
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <DropdownMenuSeparator className="bg-gray-100 my-1" />
+                      
+                      <div className="max-h-[400px] overflow-y-auto p-2">
+                        {table.getAllLeafColumns().filter(column => column.id !== "select").map(column => (
+                          <div key={column.id} className="py-1.5 px-1 flex items-center space-x-2">
+                            <Checkbox
+                              checked={column.getIsVisible()}
+                              onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                              id={`column-${column.id}`}
+                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <label 
+                              htmlFor={`column-${column.id}`}
+                              className="text-sm text-gray-700 cursor-pointer"
+                            >
+                              {column.id.replace(/_/g, ' ')}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2"
+                    className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2 h-10 rounded-md"
                     onClick={() => setShowExportConfirm(true)}
                     disabled={!userData || userData.dataFiles[selectedFileIndex]?.data.length === 0 || exporting}
                   >
@@ -808,71 +912,77 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
               </div>
             </div>
 
-            <div className="rounded-lg bg-white border border-gray-200">
-              <div className="relative w-full overflow-auto">
-                <Table className="select-none">
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow 
-                        key={headerGroup.id} 
-                        className="hover:bg-gray-50 border-b border-gray-200 select-none"
+            <div className="rounded-lg bg-white border border-gray-200 overflow-hidden">
+              <Table className="select-none w-full bg-white">
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow 
+                      key={headerGroup.id} 
+                      className="border-none select-none"
+                    >
+                      {headerGroup.headers.map((header, index) => (
+                        <TableHead 
+                          key={header.id} 
+                          className={cn(
+                            "text-gray-500 font-medium bg-gray-50 px-4 py-3 first:rounded-tl-lg last:rounded-tr-lg border-b border-gray-200 select-none text-sm",
+                            header.id === "select" && "w-[40px] pr-0"
+                          )}
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody className="bg-white select-none">
+                  {table.getRowModel().rows?.length ? (
+                    table.getRowModel().rows.map((row, rowIndex) => (
+                      <TableRow
+                        key={row.id}
+                        data-state={row.getIsSelected() && "selected"}
+                        className={cn(
+                          "hover:bg-gray-50 cursor-pointer bg-white select-none transition-colors",
+                          rowIndex === table.getRowModel().rows.length - 1 ? "last:border-b-0" : "border-b border-gray-100"
+                        )}
+                        onClick={() => {
+                          setSelectedRow(row.original)
+                          setIsRowDetailsOpen(true)
+                        }}
                       >
-                        {headerGroup.headers.map((header, index) => (
-                          <TableHead 
-                            key={header.id} 
+                        {row.getVisibleCells().map((cell, cellIndex) => (
+                          <TableCell 
+                            key={cell.id} 
                             className={cn(
-                              "text-white bg-[#1c1c1c] border-b border-gray-200 px-2 py-1 select-none",
-                              index === 0 && "rounded-tl-lg",
-                              index === headerGroup.headers.length - 1 && "rounded-tr-lg"
+                              "text-gray-900 px-4 py-3 bg-white select-none text-sm",
+                              cell.column.id === "select" && "pr-0 pl-4 w-[40px]",
+                              row.getIsSelected() && "bg-blue-50/40",
+                              rowIndex === table.getRowModel().rows.length - 1 && cellIndex === 0 && "rounded-bl-lg",
+                              rowIndex === table.getRowModel().rows.length - 1 && cellIndex === row.getVisibleCells().length - 1 && "rounded-br-lg"
                             )}
+                            style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
                           >
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                          </TableHead>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
                         ))}
                       </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody className="bg-white select-none">
-                    {table.getRowModel().rows?.length ? (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow
-                          key={row.id}
-                          data-state={row.getIsSelected() && "selected"}
-                          className="hover:bg-gray-50 border-b border-gray-200 cursor-pointer bg-white select-none"
-                          onClick={() => {
-                            setSelectedRow(row.original)
-                            setIsRowDetailsOpen(true)
-                          }}
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell 
-                              key={cell.id} 
-                              className="text-black px-2 py-1 bg-white select-none"
-                              style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
-                            >
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={columns.length}
-                          className="h-16 text-center text-gray-400 bg-white select-none"
-                        >
-                          No results.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center text-gray-400 bg-white select-none rounded-b-lg"
+                      >
+                        No results.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
 
             <div className="flex items-center justify-between py-1 mt-1 px-1">
@@ -1048,12 +1158,12 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 w-full max-w-sm">
               <div className="relative w-full">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search in all columns..."
                   value={globalFilter ?? ""}
                   onChange={(event) => setGlobalFilter(event.target.value)}
-                  className="pl-8 bg-white border-gray-200 text-black placeholder:text-gray-400 focus-visible:ring-gray-200"
+                  className="pl-9 py-2 h-10 bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-blue-500 focus-visible:ring-opacity-30 focus-visible:border-blue-500 rounded-md"
                 />
               </div>
             </div>
@@ -1068,16 +1178,121 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                   }
                   setIsFilterOpen(true);
                 }}
-                className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2"
+                className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2 h-10 rounded-md"
               >
                 <Filter className="h-4 w-4" />
                 Advanced Filters {Object.keys(activeFilters).length > 0 && `(${Object.keys(activeFilters).length})`}
               </Button>
             
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2 h-10 rounded-md"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Columns
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg rounded-md w-56">
+                  <DropdownMenuLabel className="text-sm text-gray-500 font-normal">Toggle Columns</DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-gray-100" />
+                  
+                  {/* Quick selection options */}
+                  <div className="p-2 flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-gray-500">Presets</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-7 text-xs border-gray-200 text-gray-700"
+                        onClick={() => {
+                          // Show only essential columns (customize this list as needed)
+                          const essentialColumns = ["First_Name", "Last_Name", "Email", "Company", "Title", "Country"];
+                          const newVisibility: VisibilityState = {};
+                          
+                          // First hide all columns except select
+                          table.getAllLeafColumns().forEach(column => {
+                            if (column.id !== "select") {
+                              newVisibility[column.id] = false;
+                            }
+                          });
+                          
+                          // Then show only essential columns
+                          essentialColumns.forEach(column => {
+                            newVisibility[column] = true;
+                          });
+                          
+                          table.setColumnVisibility(newVisibility);
+                        }}
+                      >
+                        Essential Only
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-7 text-xs border-gray-200 text-gray-700"
+                        onClick={() => {
+                          const newVisibility: VisibilityState = {};
+                          table.getAllLeafColumns().forEach(column => {
+                            if (column.id !== "select") {
+                              newVisibility[column.id] = true;
+                            }
+                          });
+                          table.setColumnVisibility(newVisibility);
+                        }}
+                      >
+                        Show All
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-7 text-xs border-gray-200 text-gray-700"
+                        onClick={() => {
+                          const newVisibility: VisibilityState = {};
+                          table.getAllLeafColumns().forEach(column => {
+                            if (column.id !== "select") {
+                              newVisibility[column.id] = false;
+                            }
+                          });
+                          table.setColumnVisibility(newVisibility);
+                        }}
+                      >
+                        Hide All
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <DropdownMenuSeparator className="bg-gray-100 my-1" />
+                  
+                  <div className="max-h-[400px] overflow-y-auto p-2">
+                    {table.getAllLeafColumns().filter(column => column.id !== "select").map(column => (
+                      <div key={column.id} className="py-1.5 px-1 flex items-center space-x-2">
+                        <Checkbox
+                          checked={column.getIsVisible()}
+                          onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                          id={`column-${column.id}`}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <label 
+                          htmlFor={`column-${column.id}`}
+                          className="text-sm text-gray-700 cursor-pointer"
+                        >
+                          {column.id.replace(/_/g, ' ')}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            
               <Button
                 variant="outline"
                 size="sm"
-                className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2"
+                className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2 h-10 rounded-md"
                 onClick={() => setShowExportConfirm(true)}
                 disabled={!userData || userData.dataFiles[selectedFileIndex]?.data.length === 0 || exporting}
               >
@@ -1088,71 +1303,77 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
           </div>
         </div>
 
-        <div className="rounded-lg bg-white border border-gray-200">
-          <div className="relative w-full overflow-auto">
-            <Table className="select-none">
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow 
-                    key={headerGroup.id} 
-                    className="hover:bg-gray-50 border-b border-gray-200 select-none"
+        <div className="rounded-lg bg-white border border-gray-200 overflow-hidden">
+          <Table className="select-none w-full bg-white">
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow 
+                  key={headerGroup.id} 
+                  className="border-none select-none"
+                >
+                  {headerGroup.headers.map((header, index) => (
+                    <TableHead 
+                      key={header.id} 
+                      className={cn(
+                        "text-gray-500 font-medium bg-gray-50 px-4 py-3 first:rounded-tl-lg last:rounded-tr-lg border-b border-gray-200 select-none text-sm",
+                        header.id === "select" && "w-[40px] pr-0"
+                      )}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody className="bg-white select-none">
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row, rowIndex) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className={cn(
+                      "hover:bg-gray-50 cursor-pointer bg-white select-none transition-colors",
+                      rowIndex === table.getRowModel().rows.length - 1 ? "last:border-b-0" : "border-b border-gray-100"
+                    )}
+                    onClick={() => {
+                      setSelectedRow(row.original)
+                      setIsRowDetailsOpen(true)
+                    }}
                   >
-                    {headerGroup.headers.map((header, index) => (
-                      <TableHead 
-                        key={header.id} 
+                    {row.getVisibleCells().map((cell, cellIndex) => (
+                      <TableCell 
+                        key={cell.id} 
                         className={cn(
-                          "text-white bg-[#1c1c1c] border-b border-gray-200 px-2 py-1 select-none",
-                          index === 0 && "rounded-tl-lg",
-                          index === headerGroup.headers.length - 1 && "rounded-tr-lg"
+                          "text-gray-900 px-4 py-3 bg-white select-none text-sm",
+                          cell.column.id === "select" && "pr-0 pl-4 w-[40px]",
+                          row.getIsSelected() && "bg-blue-50/40",
+                          rowIndex === table.getRowModel().rows.length - 1 && cellIndex === 0 && "rounded-bl-lg",
+                          rowIndex === table.getRowModel().rows.length - 1 && cellIndex === row.getVisibleCells().length - 1 && "rounded-br-lg"
                         )}
+                        style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
                       >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
                     ))}
                   </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody className="bg-white select-none">
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() && "selected"}
-                      className="hover:bg-gray-50 border-b border-gray-200 cursor-pointer bg-white select-none"
-                      onClick={() => {
-                        setSelectedRow(row.original)
-                        setIsRowDetailsOpen(true)
-                      }}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell 
-                          key={cell.id} 
-                          className="text-black px-2 py-1 bg-white select-none"
-                          style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-16 text-center text-gray-400 bg-white select-none"
-                    >
-                      No results.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center text-gray-400 bg-white select-none rounded-b-lg"
+                  >
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
 
         <div className="flex items-center justify-between py-1 mt-1 px-1">

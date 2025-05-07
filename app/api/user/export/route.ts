@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { type, selectedRecords, selectedIndices } = body
+    const { type, selectedRecords, selectedIndices, format = 'xlsx' } = body
 
     if (!type || (type === 'selected' && (!selectedRecords || !selectedIndices))) {
       return NextResponse.json({ error: "Invalid export parameters" }, { status: 400 })
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       .populate({
         path: "dataFiles.fileId",
         model: DataFile,
-        select: 'data'
+        select: 'data columns'
       })
       .lean()
       .exec()
@@ -44,6 +44,20 @@ export async function POST(request: NextRequest) {
       (file.fileId as any).data || []
     )
 
+    // Get columns order from the first file that has columns defined
+    let columnsOrder: string[] = []
+    for (const file of user.dataFiles) {
+      if ((file.fileId as any).columns && (file.fileId as any).columns.length > 0) {
+        columnsOrder = (file.fileId as any).columns
+        break
+      }
+    }
+
+    // If no columns order is found, get it from the first data item
+    if (columnsOrder.length === 0 && allData.length > 0) {
+      columnsOrder = Object.keys(allData[0])
+    }
+
     // If exporting selected records, use the selected indices
     if (type === 'selected' && selectedIndices) {
       allData = selectedIndices.map((index: number) => allData[index])
@@ -53,19 +67,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No data to export" }, { status: 400 })
     }
 
-    // Create Excel workbook
-    const ws = XLSX.utils.json_to_sheet(allData)
+    // Create Excel workbook - use the ordered columns to create the sheet
+    const ws = XLSX.utils.json_to_sheet(allData, { header: columnsOrder })
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Data')
 
-    // Convert to buffer
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+    let buffer: Buffer;
+    let contentType: string;
+    let filename: string;
+
+    // Generate the appropriate format
+    if (format === 'csv') {
+      // Generate CSV
+      const csv = XLSX.utils.sheet_to_csv(ws);
+      buffer = Buffer.from(csv);
+      contentType = 'text/csv';
+      filename = 'exported_data.csv';
+    } else {
+      // Default to XLSX
+      buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      filename = 'exported_data.xlsx';
+    }
 
     // Return the file
     return new NextResponse(buffer, {
       headers: {
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': 'attachment; filename="exported_data.xlsx"'
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="${filename}"`
       }
     })
   } catch (error) {

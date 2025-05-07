@@ -62,6 +62,23 @@ import { AnalyticsModal } from "./analytics-modal"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import { RowDetailsModal } from "./row-details-modal"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -100,21 +117,7 @@ const getColumnColor = (value: string, columnKey: string) => {
 }
 
 interface DataRow {
-  First_Name: string
-  Last_Name: string
-  Title: string
-  Company: string
-  Email: string
-  Corporate_Phone: string
-  Personal_Phone: string
-  Employees_Size: string
-  Industry: string
-  Person_Linkedin_Url: string
-  Website: string
-  Company_Linkedin_Url: string
-  Country: string
-  Technologies: string
-  Annual_Revenue: string
+  [key: string]: string;  // Make it a dynamic object that can hold any string keys
 }
 
 interface UserData {
@@ -124,6 +127,7 @@ interface UserData {
     id: string
     title: string
     filename: string
+    columns: string[]
     data: DataRow[]
   }>
   credits: number
@@ -138,13 +142,39 @@ interface DataTableProps {
 
 // Add this helper function at the top with other functions
 const getGeneralFilters = (data: DataRow[]) => {
+  // Determine if we have standard or new column format
+  const hasNewColumns = data.length > 0 && ('Designation' in data[0] || 'Account_name' in data[0]);
+
+  let titleField = 'Title';
+  let industryField = 'Industry';
+  let countryField = 'Country';
+  let employeeSizeField = hasNewColumns ? 'No_of_Employees' : 'Employees_Size';
+  let revenueField = hasNewColumns ? 'Revenue' : 'Annual_Revenue';
+
+  if (hasNewColumns && !data[0]['Title'] && data[0]['Designation']) {
+    titleField = 'Designation';
+  }
+
+  if (hasNewColumns && !data[0]['Industry'] && data[0]['Industry_client']) {
+    industryField = 'Industry_client';
+  }
+
+  if (hasNewColumns && !data[0]['Country'] && data[0]['Country_Contact_Person']) {
+    countryField = 'Country_Contact_Person';
+  }
+
   // Get unique titles and sort them
-  const titles = Array.from(new Set(data.map(row => row.Title)))
+  const titles = Array.from(new Set(data.map(row => row[titleField])))
     .filter(Boolean)
     .sort();
 
   // Get unique industries and sort them
-  const industries = Array.from(new Set(data.map(row => row.Industry)))
+  const industries = Array.from(new Set(data.map(row => row[industryField])))
+    .filter(Boolean)
+    .sort();
+
+  // Get unique countries
+  const countries = Array.from(new Set(data.map(row => row[countryField])))
     .filter(Boolean)
     .sort();
 
@@ -165,30 +195,39 @@ const getGeneralFilters = (data: DataRow[]) => {
   return {
     titles: titles.slice(0, 5), // Limit to top 5 titles
     industries: industries.slice(0, 5), // Limit to top 5 industries
+    countries: countries.slice(0, 5), // Limit to top 5 countries
     employeeSizeRanges,
-    revenueRanges
+    revenueRanges,
+    // Return field names for reference
+    fields: {
+      title: titleField,
+      industry: industryField,
+      country: countryField,
+      employeeSize: employeeSizeField,
+      revenue: revenueField
+    }
   };
 };
 
 // Add custom filter functions
 const employeeSizeFilter: FilterFn<DataRow> = (row, columnId, value) => {
   const employeeCount = parseInt(row.getValue<string>(columnId).replace(/[^0-9]/g, '')) || 0;
-  switch (value) {
-    case 'lt100': return employeeCount < 100;
-    case '100-500': return employeeCount >= 100 && employeeCount <= 500;
-    case 'gt500': return employeeCount > 500;
-    default: return true;
-  }
+  
+  // Handle both internal codes and display values
+  if (value === 'lt100' || value === '< 100') return employeeCount < 100;
+  if (value === '100-500' || value === '100 - 500') return employeeCount >= 100 && employeeCount <= 500;
+  if (value === 'gt500' || value === '500+') return employeeCount > 500;
+  return true;
 };
 
 const revenueFilter: FilterFn<DataRow> = (row, columnId, value) => {
   const revenue = parseFloat(row.getValue<string>(columnId).replace(/[^0-9.-]+/g, "")) || 0;
-  switch (value) {
-    case 'lt1M': return revenue < 1000000;
-    case '1M-50M': return revenue >= 1000000 && revenue <= 50000000;
-    case 'gt50M': return revenue > 50000000;
-    default: return true;
-  }
+  
+  // Handle both internal codes and display values
+  if (value === 'lt1M' || value === '< 1M') return revenue < 1000000;
+  if (value === '1M-50M' || value === '1M - 50M') return revenue >= 1000000 && revenue <= 50000000;
+  if (value === 'gt50M' || value === '50M+') return revenue > 50000000;
+  return true;
 };
 
 // Keep only copy protection functions
@@ -224,6 +263,10 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
   const [userCredits, setUserCredits] = useState<number>(0)
   const [isRowDetailsOpen, setIsRowDetailsOpen] = useState(false)
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const [pageSize, setPageSize] = useState<number>(10)
+  const [pageIndex, setPageIndex] = useState<number>(0)
+  const [showReviewSelected, setShowReviewSelected] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'xlsx' | 'csv'>('xlsx')
 
   // Add useEffect for auto-closing export success dialog
   useEffect(() => {
@@ -247,6 +290,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
         const userResponse = await fetch("/api/user/data")
         if (userResponse.ok) {
           const userData = await userResponse.json()
+          
           setUserCredits(userData.credits || 0)
           
           if (allFilesData) {
@@ -258,6 +302,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                 id: "all-files",
                 title: "All Files",
                 filename: "all-files.csv",
+                columns: [],
                 data: allFilesData
               }],
               credits: userData.credits || 0  // Use the actual credits from userData
@@ -277,22 +322,66 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
     fetchData()
   }, [allFilesData])
 
+  // NEW: Add effect to initialize column visibility with all columns visible by default
+  useEffect(() => {
+    if (userData?.dataFiles && userData.dataFiles[selectedFileIndex]?.data[0]) {
+      // Get all available columns and set them to visible by default
+      const availableColumns = Object.keys(userData.dataFiles[selectedFileIndex].data[0]);
+      const initialVisibility: VisibilityState = {};
+      
+      availableColumns.forEach(column => {
+        initialVisibility[column] = true;
+      });
+      
+      // Make sure the select column stays visible too
+      initialVisibility['select'] = true;
+      
+      // Update column visibility state
+      setColumnVisibility(initialVisibility);
+    }
+  }, [userData, selectedFileIndex]);
+
+  // Add utility functions for row selection
+  const selectAllRows = () => {
+    const newSelection: Record<string, boolean> = {};
+    // Select all filtered rows across all pages (not just current page)
+    filteredData.forEach((row, index) => {
+      newSelection[index] = true;
+    });
+    setRowSelection(newSelection);
+  };
+
+  const deselectAllRows = () => {
+    setRowSelection({});
+  };
+
   const columns = useMemo<ColumnDef<DataRow>[]>(() => {
     if (!userData?.dataFiles[selectedFileIndex]?.data[0]) {
-      console.log("No data available for columns")
       return []
     }
     
-    // console.log("Creating columns from data:", userData.dataFiles[selectedFileIndex].data[0])
+    // Get the first row to determine available columns
+    const firstRow = userData.dataFiles[selectedFileIndex].data[0];
+    
+    // Use the ordered columns from the file if available, otherwise fall back to Object.keys
+    const fileColumns = userData.dataFiles[selectedFileIndex].columns;
+    
+    const availableColumns = fileColumns && fileColumns.length > 0 
+      ? fileColumns 
+      : Object.keys(firstRow);
     
     const defaultColumns: ColumnDef<DataRow>[] = [
       {
         id: "select",
         header: ({ table }) => (
           <Checkbox
-            checked={table.getIsAllPageRowsSelected()}
+            checked={table.getIsAllRowsSelected() || (Object.keys(rowSelection).length > 0 && table.getIsAllPageRowsSelected())}
             onCheckedChange={(value) => {
-              table.toggleAllPageRowsSelected(!!value)
+              if (value) {
+                selectAllRows();
+              } else {
+                deselectAllRows();
+              }
             }}
             aria-label="Select all"
             className="translate-y-[2px]"
@@ -316,23 +405,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
       }
     ]
 
-    const dataColumns: ColumnDef<DataRow>[] = [
-      "First_Name",
-      "Last_Name",
-      "Title",
-      "Company",
-      "Email",
-      "Corporate_Phone",
-      "Personal_Phone",
-      "Employees_Size",
-      "Industry",
-      "Person_Linkedin_Url",
-      "Website",
-      "Company_Linkedin_Url",
-      "Country",
-      "Technologies",
-      "Annual_Revenue"
-    ].map(columnKey => {
+    const dataColumns: ColumnDef<DataRow>[] = availableColumns.map(columnKey => {
       const baseColumn: Partial<ColumnDef<DataRow>> = {
         accessorKey: columnKey,
         header: ({ column }) => {
@@ -380,11 +453,14 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
         },
         cell: ({ row }) => {
           const value = row.getValue(columnKey) as string;
-          if ((columnKey === "Industry" || columnKey === "Title" || columnKey === "Country" || columnKey === "Technologies") && value) {
+          if ((columnKey === "Industry" || columnKey === "Industry_client" || columnKey === "Industry_Nexuses" || 
+               columnKey === "Title" || columnKey === "Designation" || 
+               columnKey === "Country" || columnKey === "Country_Contact_Person" || 
+               columnKey === "Technologies") && value) {
             const bgColor = getColumnColor(value, columnKey);
             
             // For Technologies column, show limited badges with "+X more"
-            if (columnKey === "Technologies" && value.includes(',')) {
+            if ((columnKey === "Technologies") && value.includes(',')) {
               const techs = value.split(',').map(t => t.trim());
               const MAX_VISIBLE = 2; // Show only first 2 technologies
               const remainingCount = techs.length - MAX_VISIBLE;
@@ -416,8 +492,8 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
               );
             }
 
-            // Special styling for Title column
-            if (columnKey === "Title") {
+            // Special styling for Title and Designation columns
+            if (columnKey === "Title" || columnKey === "Designation") {
               return (
                 <div 
                   className="inline-flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]"
@@ -453,8 +529,8 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
             );
           }
 
-          // For other columns with long text
-          if (columnKey === "Email") {
+          // For email-like columns
+          if (columnKey === "Email" || columnKey === "Email_id" || columnKey.toLowerCase().includes('email')) {
             return (
               <div 
                 className="text-black h-6 flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[230px]"
@@ -465,7 +541,8 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
             );
           }
 
-          if (columnKey === "Website" || columnKey === "Person_Linkedin_Url" || columnKey === "Company_Linkedin_Url") {
+          // For URL-like columns
+          if (columnKey === "Website" || columnKey.includes("Linkedin_Url") || columnKey.includes("Linkedin")) {
             return (
               <div 
                 className="text-black max-w-[180px] truncate h-6 flex items-center"
@@ -476,8 +553,8 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
             );
           }
 
-          // Default rendering for other columns
-          if (columnKey === "Company") {
+          // Default rendering for other columns with possible truncation for long values
+          if (columnKey === "Company" || columnKey === "Account_name" || columnKey === "Company_Address" || columnKey === "Company_Headquarter" || columnKey.includes("Remark")) {
             return (
               <div 
                 className="text-black h-6 flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]"
@@ -492,9 +569,9 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
       };
 
       // Add specific filter functions for special columns
-      if (columnKey === "Employees_Size") {
+      if (columnKey === "Employees_Size" || columnKey === "No_of_Employees") {
         baseColumn.filterFn = employeeSizeFilter;
-      } else if (columnKey === "Annual_Revenue") {
+      } else if (columnKey === "Annual_Revenue" || columnKey === "Revenue") {
         baseColumn.filterFn = revenueFilter;
       }
 
@@ -516,47 +593,51 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
         return Object.entries(activeFilters).every(([filterKey, filterValues]) => {
           if (filterValues.length === 0) return true;
 
-          const rowValue = row[filterKey as keyof DataRow];
+          const rowValue = row[filterKey];
           if (!rowValue) return false;
 
           // Handle different types of filters
           switch (filterKey) {
             case 'Industry':
-              return filterValues.some(value => 
-                rowValue.toLowerCase().includes(value.toLowerCase())
-              );
+            case 'Industry_client':
+            case 'Industry_Nexuses':
             case 'Title':
+            case 'Designation':
               return filterValues.some(value => 
                 rowValue.toLowerCase().includes(value.toLowerCase())
               );
             case 'Employees_Size':
+            case 'No_of_Employees':
               const employeeCount = parseInt(rowValue.replace(/[^0-9]/g, '')) || 0;
               return filterValues.some(value => {
-                switch (value) {
-                  case 'lt100': return employeeCount < 100;
-                  case '100-500': return employeeCount >= 100 && employeeCount <= 500;
-                  case 'gt500': return employeeCount > 500;
-                  default: return false;
-                }
+                // The filter values here are '< 100', '100 - 500', '500+', not the internal codes
+                if (value === '< 100') return employeeCount < 100;
+                if (value === '100 - 500') return employeeCount >= 100 && employeeCount <= 500;
+                if (value === '500+') return employeeCount > 500;
+                return false;
               });
             case 'Annual_Revenue':
+            case 'Revenue':
               const revenue = parseFloat(rowValue.replace(/[^0-9.-]+/g, "")) || 0;
               return filterValues.some(value => {
-                switch (value) {
-                  case 'lt1M': return revenue < 1000000;
-                  case '1M-50M': return revenue >= 1000000 && revenue <= 50000000;
-                  case 'gt50M': return revenue > 50000000;
-                  default: return false;
-                }
+                // The filter values here are '< 1M', '1M - 50M', '50M+', not the internal codes
+                if (value === '< 1M') return revenue < 1000000;
+                if (value === '1M - 50M') return revenue >= 1000000 && revenue <= 50000000;
+                if (value === '50M+') return revenue > 50000000;
+                return false;
               });
             case 'Country':
+            case 'Country_Contact_Person':
               return filterValues.includes(rowValue);
             case 'Technologies':
               return filterValues.some(value => 
                 rowValue.toLowerCase().includes(value.toLowerCase())
               );
             default:
-              return true;
+              // For other columns, do a simple includes check
+              return filterValues.some(value => 
+                rowValue.toLowerCase().includes(value.toLowerCase())
+              );
           }
         });
       });
@@ -587,21 +668,32 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
       revenue: revenueFilter,
     },
     onColumnVisibilityChange: setColumnVisibility,
+    getPaginationRowModel: getPaginationRowModel(),
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newPagination = updater({ pageIndex, pageSize });
+        setPageIndex(newPagination.pageIndex);
+        setPageSize(newPagination.pageSize);
+      } else {
+        setPageIndex(updater.pageIndex);
+        setPageSize(updater.pageSize);
+      }
+    },
     state: {
       sorting,
       columnFilters,
       rowSelection,
       globalFilter,
       columnVisibility,
+      pagination: {
+        pageIndex,
+        pageSize,
+      },
     },
     enableRowSelection: true,
     enableMultiRowSelection: true,
+    manualPagination: false,
   })
-
-  // Remove the pagination effect since we don't need it anymore
-  useEffect(() => {
-    setRowSelection({})
-  }, [])
 
   // Keep only copy protection effect
   useEffect(() => {
@@ -683,6 +775,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
         },
         body: JSON.stringify({
           type: 'selected',
+          format: exportFormat,
           selectedRecords: table.getSelectedRowModel().rows.length,
           selectedIndices: selectedIndices
         }),
@@ -699,7 +792,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'exported_data.xlsx'
+      a.download = `exported_data.${exportFormat}`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -725,6 +818,15 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
       setShowExportConfirm(false)
     }
   }
+
+  // First, let's fix the handleReviewSelected function to check row selection
+  const handleReviewSelected = () => {
+    if (table.getSelectedRowModel().rows.length === 0) {
+      setShowNoSelectionWarning(true);
+      return;
+    }
+    setShowReviewSelected(true);
+  };
 
   if (loading) {
     return (
@@ -820,7 +922,41 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                             className="h-7 text-xs border-gray-200 text-gray-700"
                             onClick={() => {
                               // Show only essential columns (customize this list as needed)
-                              const essentialColumns = ["First_Name", "Last_Name", "Email", "Company", "Title", "Country"];
+                              const essentialColumns = [];
+                              
+                              // Check what columns are available in the data
+                              const hasColumn = (col: string) => table.getAllLeafColumns().some(column => column.id === col);
+                              
+                              // Add name columns
+                              if (hasColumn("First_Name")) essentialColumns.push("First_Name");
+                              if (hasColumn("Last_Name")) essentialColumns.push("Last_Name");
+                              if (hasColumn("Contact_Name")) essentialColumns.push("Contact_Name");
+                              
+                              // Add company columns
+                              if (hasColumn("Company")) essentialColumns.push("Company");
+                              if (hasColumn("Account_name")) essentialColumns.push("Account_name");
+                              
+                              // Add title/role columns
+                              if (hasColumn("Title")) essentialColumns.push("Title");
+                              if (hasColumn("Designation")) essentialColumns.push("Designation");
+                              
+                              // Add contact info columns
+                              if (hasColumn("Email")) essentialColumns.push("Email");
+                              if (hasColumn("Email_id")) essentialColumns.push("Email_id");
+                              if (hasColumn("Corporate_Phone")) essentialColumns.push("Corporate_Phone");
+                              if (hasColumn("Personal_Phone")) essentialColumns.push("Personal_Phone");
+                              if (hasColumn("Contact_Number_Personal")) essentialColumns.push("Contact_Number_Personal");
+                              
+                              // Add location columns
+                              if (hasColumn("Country")) essentialColumns.push("Country");
+                              if (hasColumn("Country_Contact_Person")) essentialColumns.push("Country_Contact_Person");
+                              if (hasColumn("City")) essentialColumns.push("City");
+                              
+                              // Add industry and company data
+                              if (hasColumn("Industry")) essentialColumns.push("Industry");
+                              if (hasColumn("Industry_client")) essentialColumns.push("Industry_client");
+                              if (hasColumn("Type_of_Company")) essentialColumns.push("Type_of_Company");
+                              
                               const newVisibility: VisibilityState = {};
                               
                               // First hide all columns except select
@@ -902,11 +1038,11 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                     variant="outline"
                     size="sm"
                     className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2 h-10 rounded-md"
-                    onClick={() => setShowExportConfirm(true)}
+                    onClick={handleReviewSelected}
                     disabled={!userData || userData.dataFiles[selectedFileIndex]?.data.length === 0 || exporting}
                   >
                     <Download className="h-4 w-4" />
-                    Export Selected
+                    Review & Export
                   </Button>
                 </div>
               </div>
@@ -946,7 +1082,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                         key={row.id}
                         data-state={row.getIsSelected() && "selected"}
                         className={cn(
-                          "hover:bg-gray-50 cursor-pointer bg-white select-none transition-colors",
+                          "hover:bg-blue-50/30 cursor-pointer bg-white select-none transition-colors",
                           rowIndex === table.getRowModel().rows.length - 1 ? "last:border-b-0" : "border-b border-gray-100"
                         )}
                         onClick={() => {
@@ -960,9 +1096,9 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                             className={cn(
                               "text-gray-900 px-4 py-3 bg-white select-none text-sm",
                               cell.column.id === "select" && "pr-0 pl-4 w-[40px]",
-                              row.getIsSelected() && "bg-blue-50/40",
+                              row.getIsSelected() && "bg-blue-50/50",
                               rowIndex === table.getRowModel().rows.length - 1 && cellIndex === 0 && "rounded-bl-lg",
-                              rowIndex === table.getRowModel().rows.length - 1 && cellIndex === row.getVisibleCells().length - 1 && "rounded-br-lg"
+                              rowIndex ==table.getRowModel().rows.length - 1 && cellIndex === row.getVisibleCells().length - 1 && "rounded-br-lg"
                             )}
                             style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
                           >
@@ -985,12 +1121,226 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
               </Table>
             </div>
 
-            <div className="flex items-center justify-between py-1 mt-1 px-1">
-              <div className="flex-1 text-sm text-gray-500">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                {table.getFilteredRowModel().rows.length} row(s) selected.
+            <div className="flex flex-col gap-4 py-4 px-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <p className="text-sm font-medium text-gray-600">
+                    Rows per page
+                  </p>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(value) => {
+                      table.setPageSize(Number(value));
+                    }}
+                  >
+                    <SelectTrigger className="h-9 w-[80px]">
+                      <SelectValue placeholder={pageSize} />
+                    </SelectTrigger>
+                    <SelectContent side="top">
+                      {[10, 50, 100].map((size) => (
+                        <SelectItem key={size} value={String(size)}>
+                          {size}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Pagination>
+                  <PaginationContent className="gap-2">
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => table.previousPage()} 
+                        className={cn(
+                          "h-9 px-3 bg-white border-gray-200 hover:bg-gray-50",
+                          !table.getCanPreviousPage() ? "pointer-events-none opacity-50" : ""
+                        )}
+                      />
+                    </PaginationItem>
+                    
+                    {/* Generate page numbers */}
+                    {Array.from({ length: table.getPageCount() }).map((_, i) => {
+                      // Show fewer pages when we have many pages
+                      const showReducedPages = table.getPageCount() > 10;
+                      // Show first page, last page, and pages around current page
+                      if (
+                        i === 0 || 
+                        i === table.getPageCount() - 1 || 
+                        (showReducedPages 
+                          ? Math.abs(i - pageIndex) <= 1  // With many pages, only show immediate neighbors
+                          : Math.abs(i - pageIndex) <= 2) // With fewer pages, show more neighbors
+                      ) {
+                        return (
+                          <PaginationItem key={i}>
+                            <PaginationLink 
+                              onClick={() => table.setPageIndex(i)}
+                              isActive={pageIndex === i}
+                              className="h-9 w-9 font-medium"
+                            >
+                              {i + 1}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      }
+                      
+                      // Add ellipsis if there's a gap (only add one ellipsis per gap)
+                      if (
+                        (i === 1 && pageIndex > 2) || 
+                        (i === table.getPageCount() - 2 && pageIndex < table.getPageCount() - 3) ||
+                        (i === pageIndex - 2 && i > 1 && showReducedPages) ||
+                        (i === pageIndex + 2 && i < table.getPageCount() - 2 && showReducedPages)
+                      ) {
+                        return (
+                          <PaginationItem key={i}>
+                            <PaginationEllipsis className="h-9" />
+                          </PaginationItem>
+                        );
+                      }
+                      
+                      return null;
+                    })}
+                    
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => table.nextPage()} 
+                        className={cn(
+                          "h-9 px-3 bg-white border-gray-200 hover:bg-gray-50",
+                          !table.getCanNextPage() ? "pointer-events-none opacity-50" : ""
+                        )}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+
+                <div className="text-sm font-medium text-gray-600">
+                  {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                  {table.getFilteredRowModel().rows.length} row(s) selected
+                </div>
               </div>
             </div>
+
+            {/* Review Selected Dialog */}
+            <Dialog open={showReviewSelected} onOpenChange={setShowReviewSelected}>
+              <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col bg-white">
+                <DialogHeader>
+                  <DialogTitle>Review Selected Records</DialogTitle>
+                  <DialogDescription>
+                    Review the {table.getSelectedRowModel().rows.length} records you've selected before exporting
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="overflow-y-auto flex-grow mt-4 pr-2">
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow className="border-none">
+                        {table.getVisibleLeafColumns()
+                          .filter(column => column.id !== "select" && column.getIsVisible())
+                          .slice(0, 6) // Only show first 6 columns in the review
+                          .map((column) => (
+                            <TableHead 
+                              key={column.id} 
+                              className="bg-gray-50 px-4 py-3 text-sm font-medium text-gray-500 border-b border-gray-200"
+                            >
+                              {column.id.replace(/_/g, ' ')}
+                            </TableHead>
+                          ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {table.getSelectedRowModel().rows.slice(0, 50).map((row: any, i: number) => {
+                        const rowData = row.original;
+                        return (
+                          <TableRow 
+                            key={i} 
+                            className="bg-white hover:bg-blue-50/30"
+                          >
+                            {table.getVisibleLeafColumns()
+                              .filter(column => column.id !== "select" && column.getIsVisible())
+                              .slice(0, 6) // Only show first 6 columns
+                              .map(column => {
+                                // Get the data key from the column id
+                                const dataKey = column.id as keyof DataRow;
+                                // Get the value from the row data
+                                const value = rowData[dataKey];
+                                // Fix the styling for specific title column
+                                if (column.id === "Title") {
+                                  return (
+                                    <TableCell 
+                                      key={column.id} 
+                                      className="px-4 py-2 text-sm border-b border-gray-100 text-gray-800"
+                                    >
+                                      <div 
+                                        className="px-2.5 py-1 rounded-md inline-block text-xs font-medium border bg-blue-50 text-blue-800 border-blue-200"
+                                      >
+                                        {value}
+                                      </div>
+                                    </TableCell>
+                                  );
+                                }
+                                // Improve the display for the review dialog
+                                return (
+                                  <TableCell 
+                                    key={column.id} 
+                                    className="px-4 py-2 text-sm border-b border-gray-100 text-gray-800"
+                                  >
+                                    {typeof value === 'string' ? (
+                                      (column.id === "Industry" || column.id === "Country" || column.id === "Technologies") ? (
+                                        <div 
+                                          className="px-2 py-0.5 rounded-md inline-block text-xs font-medium border bg-gray-50 text-gray-800 border-gray-200"
+                                        >
+                                          {value}
+                                        </div>
+                                      ) : (
+                                        <span className="text-gray-800 font-medium">{value}</span>
+                                      )
+                                    ) : (
+                                      <span className="text-gray-800">{String(value)}</span>
+                                    )}
+                                  </TableCell>
+                                );
+                              })}
+                          </TableRow>
+                        );
+                      })}
+                      {table.getSelectedRowModel().rows.length > 50 && (
+                        <TableRow>
+                          <TableCell 
+                            colSpan={6}
+                            className="px-4 py-2 text-center text-sm text-gray-500 italic"
+                          >
+                            ... and {table.getSelectedRowModel().rows.length - 50} more records
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                
+                <div className="pt-4 border-t mt-4">
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-600">
+                      <strong>{table.getSelectedRowModel().rows.length}</strong> records selected
+                      <span className="mx-2">•</span>
+                      Will use <strong>{table.getSelectedRowModel().rows.length}</strong> credits
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setShowReviewSelected(false)}>
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          setShowReviewSelected(false);
+                          setShowExportConfirm(true);
+                        }}
+                        className="bg-black text-white hover:bg-black/90"
+                      >
+                        Proceed to Export
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* Export Confirmation Dialog */}
             <Dialog open={showExportConfirm} onOpenChange={setShowExportConfirm}>
@@ -1037,6 +1387,37 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                       </span>
                     </div>
                   </div>
+                  
+                  {/* Export Format Selection */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Export Format</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setExportFormat('xlsx')}
+                        className={`flex items-center justify-center gap-2 p-3 border rounded-md ${
+                          exportFormat === 'xlsx' 
+                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        <Download className="h-4 w-4" />
+                        <span className="font-medium">Excel (XLSX)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExportFormat('csv')}
+                        className={`flex items-center justify-center gap-2 p-3 border rounded-md ${
+                          exportFormat === 'csv' 
+                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        <Download className="h-4 w-4" />
+                        <span className="font-medium">CSV</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setShowExportConfirm(false)}>
@@ -1047,7 +1428,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                     disabled={exporting || userCredits < table.getSelectedRowModel().rows.length}
                     className="bg-black text-white hover:bg-black/90"
                   >
-                    {exporting ? 'Exporting...' : 'Confirm Export'}
+                    {exporting ? 'Exporting...' : `Export as ${exportFormat.toUpperCase()}`}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1078,7 +1459,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                 <DialogHeader>
                   <DialogTitle>Export Successful</DialogTitle>
                   <DialogDescription>
-                    Your data has been exported successfully.
+                    Your data has been exported successfully as {exportFormat.toUpperCase()}.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -1086,13 +1467,17 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                     <AlertCircle className="h-4 w-4 text-green-600" />
                     <AlertTitle className="text-green-800">Export Completed</AlertTitle>
                     <AlertDescription className="text-green-700">
-                      The file has been downloaded to your computer. You can find it in your downloads folder.
+                      The file has been downloaded to your computer. You can find it in your downloads folder as exported_data.{exportFormat}
                     </AlertDescription>
                   </Alert>
                   <div className="text-sm text-muted-foreground space-y-2">
                     <div className="flex justify-between">
                       <span>Records Exported:</span>
                       <span className="font-medium">{table.getSelectedRowModel().rows.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Export Format:</span>
+                      <span className="font-medium">{exportFormat.toUpperCase()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Credits Used:</span>
@@ -1211,7 +1596,41 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                         className="h-7 text-xs border-gray-200 text-gray-700"
                         onClick={() => {
                           // Show only essential columns (customize this list as needed)
-                          const essentialColumns = ["First_Name", "Last_Name", "Email", "Company", "Title", "Country"];
+                          const essentialColumns = [];
+                          
+                          // Check what columns are available in the data
+                          const hasColumn = (col: string) => table.getAllLeafColumns().some(column => column.id === col);
+                          
+                          // Add name columns
+                          if (hasColumn("First_Name")) essentialColumns.push("First_Name");
+                          if (hasColumn("Last_Name")) essentialColumns.push("Last_Name");
+                          if (hasColumn("Contact_Name")) essentialColumns.push("Contact_Name");
+                          
+                          // Add company columns
+                          if (hasColumn("Company")) essentialColumns.push("Company");
+                          if (hasColumn("Account_name")) essentialColumns.push("Account_name");
+                          
+                          // Add title/role columns
+                          if (hasColumn("Title")) essentialColumns.push("Title");
+                          if (hasColumn("Designation")) essentialColumns.push("Designation");
+                          
+                          // Add contact info columns
+                          if (hasColumn("Email")) essentialColumns.push("Email");
+                          if (hasColumn("Email_id")) essentialColumns.push("Email_id");
+                          if (hasColumn("Corporate_Phone")) essentialColumns.push("Corporate_Phone");
+                          if (hasColumn("Personal_Phone")) essentialColumns.push("Personal_Phone");
+                          if (hasColumn("Contact_Number_Personal")) essentialColumns.push("Contact_Number_Personal");
+                          
+                          // Add location columns
+                          if (hasColumn("Country")) essentialColumns.push("Country");
+                          if (hasColumn("Country_Contact_Person")) essentialColumns.push("Country_Contact_Person");
+                          if (hasColumn("City")) essentialColumns.push("City");
+                          
+                          // Add industry and company data
+                          if (hasColumn("Industry")) essentialColumns.push("Industry");
+                          if (hasColumn("Industry_client")) essentialColumns.push("Industry_client");
+                          if (hasColumn("Type_of_Company")) essentialColumns.push("Type_of_Company");
+                          
                           const newVisibility: VisibilityState = {};
                           
                           // First hide all columns except select
@@ -1293,11 +1712,11 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                 variant="outline"
                 size="sm"
                 className="text-gray-700 border-gray-200 hover:bg-gray-50 flex items-center gap-2 h-10 rounded-md"
-                onClick={() => setShowExportConfirm(true)}
+                onClick={handleReviewSelected}
                 disabled={!userData || userData.dataFiles[selectedFileIndex]?.data.length === 0 || exporting}
               >
                 <Download className="h-4 w-4" />
-                Export Selected
+                Review & Export
               </Button>
             </div>
           </div>
@@ -1337,7 +1756,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
                     className={cn(
-                      "hover:bg-gray-50 cursor-pointer bg-white select-none transition-colors",
+                      "hover:bg-blue-50/30 cursor-pointer bg-white select-none transition-colors",
                       rowIndex === table.getRowModel().rows.length - 1 ? "last:border-b-0" : "border-b border-gray-100"
                     )}
                     onClick={() => {
@@ -1351,7 +1770,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                         className={cn(
                           "text-gray-900 px-4 py-3 bg-white select-none text-sm",
                           cell.column.id === "select" && "pr-0 pl-4 w-[40px]",
-                          row.getIsSelected() && "bg-blue-50/40",
+                          row.getIsSelected() && "bg-blue-50/50",
                           rowIndex === table.getRowModel().rows.length - 1 && cellIndex === 0 && "rounded-bl-lg",
                           rowIndex === table.getRowModel().rows.length - 1 && cellIndex === row.getVisibleCells().length - 1 && "rounded-br-lg"
                         )}
@@ -1376,12 +1795,226 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
           </Table>
         </div>
 
-        <div className="flex items-center justify-between py-1 mt-1 px-1">
-          <div className="flex-1 text-sm text-gray-500">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+        <div className="flex flex-col gap-4 py-4 px-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <p className="text-sm font-medium text-gray-600">
+                Rows per page
+              </p>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => {
+                  table.setPageSize(Number(value));
+                }}
+              >
+                <SelectTrigger className="h-9 w-[80px]">
+                  <SelectValue placeholder={pageSize} />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  {[10, 50, 100].map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Pagination>
+              <PaginationContent className="gap-2">
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => table.previousPage()} 
+                    className={cn(
+                      "h-9 px-3 bg-white border-gray-200 hover:bg-gray-50",
+                      !table.getCanPreviousPage() ? "pointer-events-none opacity-50" : ""
+                    )}
+                  />
+                </PaginationItem>
+                
+                {/* Generate page numbers */}
+                {Array.from({ length: table.getPageCount() }).map((_, i) => {
+                  // Show fewer pages when we have many pages
+                  const showReducedPages = table.getPageCount() > 10;
+                  // Show first page, last page, and pages around current page
+                  if (
+                    i === 0 || 
+                    i === table.getPageCount() - 1 || 
+                    (showReducedPages 
+                      ? Math.abs(i - pageIndex) <= 1  // With many pages, only show immediate neighbors
+                      : Math.abs(i - pageIndex) <= 2) // With fewer pages, show more neighbors
+                  ) {
+                    return (
+                      <PaginationItem key={i}>
+                        <PaginationLink 
+                          onClick={() => table.setPageIndex(i)}
+                          isActive={pageIndex === i}
+                          className="h-9 w-9 font-medium"
+                        >
+                          {i + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  }
+                  
+                  // Add ellipsis if there's a gap (only add one ellipsis per gap)
+                  if (
+                    (i === 1 && pageIndex > 2) || 
+                    (i === table.getPageCount() - 2 && pageIndex < table.getPageCount() - 3) ||
+                    (i === pageIndex - 2 && i > 1 && showReducedPages) ||
+                    (i === pageIndex + 2 && i < table.getPageCount() - 2 && showReducedPages)
+                  ) {
+                    return (
+                      <PaginationItem key={i}>
+                        <PaginationEllipsis className="h-9" />
+                      </PaginationItem>
+                    );
+                  }
+                  
+                  return null;
+                })}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => table.nextPage()} 
+                    className={cn(
+                      "h-9 px-3 bg-white border-gray-200 hover:bg-gray-50",
+                      !table.getCanNextPage() ? "pointer-events-none opacity-50" : ""
+                    )}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+
+            <div className="text-sm font-medium text-gray-600">
+              {table.getFilteredSelectedRowModel().rows.length} of{" "}
+              {table.getFilteredRowModel().rows.length} row(s) selected
+            </div>
           </div>
         </div>
+
+        {/* Review Selected Dialog */}
+        <Dialog open={showReviewSelected} onOpenChange={setShowReviewSelected}>
+          <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col bg-white">
+            <DialogHeader>
+              <DialogTitle>Review Selected Records</DialogTitle>
+              <DialogDescription>
+                Review the {table.getSelectedRowModel().rows.length} records you've selected before exporting
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="overflow-y-auto flex-grow mt-4 pr-2">
+              <Table className="w-full">
+                <TableHeader>
+                  <TableRow className="border-none">
+                    {table.getVisibleLeafColumns()
+                      .filter(column => column.id !== "select" && column.getIsVisible())
+                      .slice(0, 6) // Only show first 6 columns in the review
+                      .map((column) => (
+                        <TableHead 
+                          key={column.id} 
+                          className="bg-gray-50 px-4 py-3 text-sm font-medium text-gray-500 border-b border-gray-200"
+                        >
+                          {column.id.replace(/_/g, ' ')}
+                        </TableHead>
+                      ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {table.getSelectedRowModel().rows.slice(0, 50).map((row: any, i: number) => {
+                    const rowData = row.original;
+                    return (
+                      <TableRow 
+                        key={i} 
+                        className="bg-white hover:bg-blue-50/30"
+                      >
+                        {table.getVisibleLeafColumns()
+                          .filter(column => column.id !== "select" && column.getIsVisible())
+                          .slice(0, 6) // Only show first 6 columns
+                          .map(column => {
+                            // Get the data key from the column id
+                            const dataKey = column.id as keyof DataRow;
+                            // Get the value from the row data
+                            const value = rowData[dataKey];
+                            // Fix the styling for specific title column
+                            if (column.id === "Title") {
+                              return (
+                                <TableCell 
+                                  key={column.id} 
+                                  className="px-4 py-2 text-sm border-b border-gray-100 text-gray-800"
+                                >
+                                  <div 
+                                    className="px-2.5 py-1 rounded-md inline-block text-xs font-medium border bg-blue-50 text-blue-800 border-blue-200"
+                                  >
+                                    {value}
+                                  </div>
+                                </TableCell>
+                              );
+                            }
+                            // Improve the display for the review dialog
+                            return (
+                              <TableCell 
+                                key={column.id} 
+                                className="px-4 py-2 text-sm border-b border-gray-100 text-gray-800"
+                              >
+                                {typeof value === 'string' ? (
+                                  (column.id === "Industry" || column.id === "Country" || column.id === "Technologies") ? (
+                                    <div 
+                                      className="px-2 py-0.5 rounded-md inline-block text-xs font-medium border bg-gray-50 text-gray-800 border-gray-200"
+                                    >
+                                      {value}
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-800 font-medium">{value}</span>
+                                  )
+                                ) : (
+                                  <span className="text-gray-800">{String(value)}</span>
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                      </TableRow>
+                    );
+                  })}
+                  {table.getSelectedRowModel().rows.length > 50 && (
+                    <TableRow>
+                      <TableCell 
+                        colSpan={6}
+                        className="px-4 py-2 text-center text-sm text-gray-500 italic"
+                      >
+                        ... and {table.getSelectedRowModel().rows.length - 50} more records
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            
+            <div className="pt-4 border-t mt-4">
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-600">
+                  <strong>{table.getSelectedRowModel().rows.length}</strong> records selected
+                  <span className="mx-2">•</span>
+                  Will use <strong>{table.getSelectedRowModel().rows.length}</strong> credits
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setShowReviewSelected(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setShowReviewSelected(false);
+                      setShowExportConfirm(true);
+                    }}
+                    className="bg-black text-white hover:bg-black/90"
+                  >
+                    Proceed to Export
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Export Confirmation Dialog */}
         <Dialog open={showExportConfirm} onOpenChange={setShowExportConfirm}>
@@ -1428,6 +2061,37 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                   </span>
                 </div>
               </div>
+              
+              {/* Export Format Selection */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Export Format</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setExportFormat('xlsx')}
+                    className={`flex items-center justify-center gap-2 p-3 border rounded-md ${
+                      exportFormat === 'xlsx' 
+                        ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    <Download className="h-4 w-4" />
+                    <span className="font-medium">Excel (XLSX)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setExportFormat('csv')}
+                    className={`flex items-center justify-center gap-2 p-3 border rounded-md ${
+                      exportFormat === 'csv' 
+                        ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    <Download className="h-4 w-4" />
+                    <span className="font-medium">CSV</span>
+                  </button>
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowExportConfirm(false)}>
@@ -1438,7 +2102,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                 disabled={exporting || userCredits < table.getSelectedRowModel().rows.length}
                 className="bg-black text-white hover:bg-black/90"
               >
-                {exporting ? 'Exporting...' : 'Confirm Export'}
+                {exporting ? 'Exporting...' : `Export as ${exportFormat.toUpperCase()}`}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1469,7 +2133,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
             <DialogHeader>
               <DialogTitle>Export Successful</DialogTitle>
               <DialogDescription>
-                Your data has been exported successfully.
+                Your data has been exported successfully as {exportFormat.toUpperCase()}.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -1477,13 +2141,17 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                 <AlertCircle className="h-4 w-4 text-green-600" />
                 <AlertTitle className="text-green-800">Export Completed</AlertTitle>
                 <AlertDescription className="text-green-700">
-                  The file has been downloaded to your computer. You can find it in your downloads folder.
+                  The file has been downloaded to your computer. You can find it in your downloads folder as exported_data.{exportFormat}
                 </AlertDescription>
               </Alert>
               <div className="text-sm text-muted-foreground space-y-2">
                 <div className="flex justify-between">
                   <span>Records Exported:</span>
                   <span className="font-medium">{table.getSelectedRowModel().rows.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Export Format:</span>
+                  <span className="font-medium">{exportFormat.toUpperCase()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Credits Used:</span>

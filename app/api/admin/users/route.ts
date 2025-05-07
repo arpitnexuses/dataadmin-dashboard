@@ -25,7 +25,9 @@ interface PopulatedUser {
   dataFiles: PopulatedUserDataFile[]
 }
 
-const REQUIRED_COLUMNS = [
+// All supported columns - all are optional to support both old and new data formats
+const ALL_SUPPORTED_COLUMNS = [
+  // Original columns
   'First_Name',
   'Last_Name',
   'Title',
@@ -40,7 +42,31 @@ const REQUIRED_COLUMNS = [
   'Company_Linkedin_Url',
   'Country',
   'Technologies',
-  'Annual_Revenue'
+  'Annual_Revenue',
+  
+  // New columns
+  'S_No',
+  'Account_name',
+  'Industry_client',
+  'Industry_Nexuses',
+  'Type_of_Company',
+  'priority',
+  'Sales_Manager',
+  'No_of_Employees',
+  'Revenue',
+  'Contact_Name',
+  'Designation',
+  'Contact_Number_Personal',
+  'Phone_Status',
+  'Email_id',
+  'Email_Status',
+  'City',
+  'State',
+  'Country_Contact_Person',
+  'Company_Address',
+  'Company_Headquarter',
+  'Workmates_Remark',
+  'TM_Remarks'
 ]
 
 export async function GET(request: NextRequest) {
@@ -125,23 +151,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unsupported file format. Please upload an Excel (.xlsx, .xls) or CSV file." }, { status: 400 })
     }
 
-    // Validate required columns
-    const fileHeaders = Object.keys(parsedData[0] || {}).map(header => header.trim())
-    const missingColumns = REQUIRED_COLUMNS.filter(col => !fileHeaders.includes(col))
-    
-    if (missingColumns.length > 0) {
-      return NextResponse.json({ 
-        error: `Missing required columns: ${missingColumns.join(', ')}`,
-        requiredColumns: REQUIRED_COLUMNS
-      }, { status: 400 })
+    // Basic validation - ensure there's data
+    if (!parsedData || parsedData.length === 0) {
+      return NextResponse.json({ error: "The uploaded file contains no data." }, { status: 400 })
     }
+
+    // Ensure the file has at least some column headers
+    const fileHeaders = Object.keys(parsedData[0] || {})
+    if (fileHeaders.length === 0) {
+      return NextResponse.json({ error: "The uploaded file has no column headers." }, { status: 400 })
+    }
+
+    // Store the original column order from the file
+    const originalColumns = [...fileHeaders]
 
     // Clean and validate the data
     const cleanedData = parsedData.map(row => {
       const cleanedRow: Record<string, string> = {}
-      for (const column of REQUIRED_COLUMNS) {
-        cleanedRow[column] = (row[column] || '').toString().trim()
+      
+      // First add columns in the original order from the file
+      for (const header of originalColumns) {
+        if (row[header] !== undefined) {
+          cleanedRow[header] = (row[header] || '').toString().trim()
+        }
       }
+      
+      // Then add any additional supported columns that might be missing but have a match
+      for (const column of ALL_SUPPORTED_COLUMNS) {
+        if (cleanedRow[column] === undefined) {
+          // Check for case-insensitive match
+          const matchingKey = Object.keys(row).find(
+            key => key.toLowerCase() === column.toLowerCase() && key !== column
+          )
+          
+          if (matchingKey !== undefined) {
+            // Use the supported column name but keep track of original mapping
+            cleanedRow[column] = (row[matchingKey] || '').toString().trim()
+          }
+        }
+      }
+      
       return cleanedRow
     })
 
@@ -149,6 +198,7 @@ export async function POST(request: NextRequest) {
     const dataFile = await DataFile.create({
       filename: file.name,
       originalName: file.name,
+      columns: originalColumns,
       data: cleanedData,
     })
 

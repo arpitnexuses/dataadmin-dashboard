@@ -254,17 +254,61 @@ export default function Filter({ isOpen, onClose, onApplyFilters, data }: Filter
   };
 
   const removeFilter = (section: string, value: string) => {
-    setSelectedFilters(prev => ({
-      ...prev,
-      [section]: prev[section].filter(v => v !== value)
-    }));
+    // Create a complete copy of current filters
+    const updatedFilters = JSON.parse(JSON.stringify(selectedFilters));
+    
+    // Remove the item from our copy
+    updatedFilters[section] = updatedFilters[section].filter((v: string) => v !== value);
+    
+    // First update the local state
+    setSelectedFilters(updatedFilters);
+    
+    // Process for parent component
+    const processedFilters = { ...updatedFilters };
+    
+    // Process Employee Size filters
+    if (processedFilters['Employees_Size']) {
+      processedFilters['Employees_Size'] = processedFilters['Employees_Size'].map((v: string) => {
+        switch (v) {
+          case 'lt100': return '< 100';
+          case '100-500': return '100 - 500';
+          case 'gt500': return '500+';
+          default: return v;
+        }
+      });
+    }
+
+    // Process Revenue filters
+    if (processedFilters['Annual_Revenue']) {
+      processedFilters['Annual_Revenue'] = processedFilters['Annual_Revenue'].map((v: string) => {
+        switch (v) {
+          case 'lt1M': return '< 1M';
+          case '1M-50M': return '1M - 50M';
+          case 'gt50M': return '50M+';
+          default: return v;
+        }
+      });
+    }
+
+    // Call the parent update function after a minimal delay
+    // to ensure we're not updating during render
+    setTimeout(() => {
+      onApplyFilters(processedFilters);
+    }, 10);
+    
     setOpenSection(null);
   };
 
   const clearFilters = () => {
+    // First update the local state
     setSelectedFilters({});
-    onApplyFilters({});
-    onClose();
+    
+    // Use setTimeout to ensure we're not updating during render
+    setTimeout(() => {
+      // Then apply to parent
+      onApplyFilters({});
+      onClose();
+    }, 10);
   };
 
   const handleApply = () => {
@@ -274,11 +318,13 @@ export default function Filter({ isOpen, onClose, onApplyFilters, data }: Filter
       (dropdown as HTMLElement).click();
     });
 
-    const processedFilters = { ...selectedFilters };
+    // Create a deep copy to work with
+    const currentFilters = JSON.parse(JSON.stringify(selectedFilters));
+    const processedFilters = { ...currentFilters };
     
     // Process Employee Size filters
     if (processedFilters['Employees_Size']) {
-      processedFilters['Employees_Size'] = processedFilters['Employees_Size'].map(value => {
+      processedFilters['Employees_Size'] = processedFilters['Employees_Size'].map((value: string) => {
         switch (value) {
           case 'lt100': return '< 100';
           case '100-500': return '100 - 500';
@@ -290,7 +336,7 @@ export default function Filter({ isOpen, onClose, onApplyFilters, data }: Filter
 
     // Process Revenue filters
     if (processedFilters['Annual_Revenue']) {
-      processedFilters['Annual_Revenue'] = processedFilters['Annual_Revenue'].map(value => {
+      processedFilters['Annual_Revenue'] = processedFilters['Annual_Revenue'].map((value: string) => {
         switch (value) {
           case 'lt1M': return '< 1M';
           case '1M-50M': return '1M - 50M';
@@ -300,9 +346,11 @@ export default function Filter({ isOpen, onClose, onApplyFilters, data }: Filter
       });
     }
 
-    // Apply filters and close the filter modal
-    onApplyFilters(processedFilters);
-    onClose();
+    // Apply filters and close the filter modal after a short delay
+    setTimeout(() => {
+      onApplyFilters(processedFilters);
+      onClose();
+    }, 10);
   };
 
   const getSelectedLabel = (section: string, value: string) => {

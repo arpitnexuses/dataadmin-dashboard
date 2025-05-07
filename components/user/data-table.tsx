@@ -55,7 +55,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { Building2, Mail, Phone, Users, Globe, LinkedinIcon, DollarSign, Briefcase, MapPin } from "lucide-react"
+import { Building2, Mail, Phone, Users, Globe, LinkedinIcon, DollarSign, Briefcase, MapPin, Info, User } from "lucide-react"
 import { motion } from "framer-motion"
 import { BarChart, PieChart, LineChart } from "lucide-react"
 import { AnalyticsModal } from "./analytics-modal"
@@ -140,6 +140,135 @@ interface DataTableProps {
   allFilesData?: DataRow[]
 }
 
+// Define the standard column order and mapping
+const STANDARD_COLUMNS = [
+  'S_No',
+  'First_Name',
+  'Last_Name',
+  'Contact_Name',
+  'Designation',
+  'Title',
+  'Company',
+  'Account_name',
+  'Email',
+  'Email_id',
+  'Email_Status',
+  'Corporate_Phone',
+  'Personal_Phone',
+  'Contact_Number_Personal',
+  'Phone_Status',
+  'Employees_Size',
+  'No_of_Employees',
+  'Industry',
+  'Industry_client',
+  'Industry_Nexuses',
+  'Type_of_Company',
+  'Priority',
+  'Sales_Manager',
+  'Revenue',
+  'Annual_Revenue',
+  'Technologies',
+  'Person_Linkedin_Url',
+  'Website',
+  'Company_Linkedin_Url',
+  'Country',
+  'Country_Contact_Person',
+  'City',
+  'State',
+  'Company_Address',
+  'Company_Headquarter',
+  'Workmates_Remark',
+  'TM_Remarks'
+];
+
+// Map column names to their display names
+const COLUMN_DISPLAY_NAMES: Record<string, string> = {
+  S_No: "S. No.",
+  First_Name: "First Name",
+  Last_Name: "Last Name",
+  Contact_Name: "Contact Name",
+  Designation: "Designation",
+  Title: "Title",
+  Company: "Company",
+  Account_name: "Account Name",
+  Email: "Email",
+  Email_id: "Email ID",
+  Email_Status: "Email Status",
+  Corporate_Phone: "Corporate Phone",
+  Personal_Phone: "Personal Phone",
+  Contact_Number_Personal: "Contact Number (Personal)",
+  Phone_Status: "Phone Status",
+  Employees_Size: "Employees Size",
+  No_of_Employees: "Number of Employees",
+  Industry: "Industry",
+  Industry_client: "Industry (Client)",
+  Industry_Nexuses: "Industry (Nexuses)",
+  Type_of_Company: "Company Type",
+  Priority: "Priority",
+  Sales_Manager: "Sales Manager",
+  Revenue: "Revenue",
+  Annual_Revenue: "Annual Revenue",
+  Technologies: "Technologies",
+  Person_Linkedin_Url: "LinkedIn Profile",
+  Website: "Website",
+  Company_Linkedin_Url: "Company LinkedIn",
+  Country: "Country",
+  Country_Contact_Person: "Country (Contact Person)",
+  City: "City",
+  State: "State",
+  Company_Address: "Company Address",
+  Company_Headquarter: "Company Headquarter",
+  Workmates_Remark: "Workmates Remark",
+  TM_Remarks: "TM Remarks"
+};
+
+// Map column names to icons
+const COLUMN_ICONS: Record<string, any> = {
+  S_No: Info,
+  First_Name: User,
+  Last_Name: User,
+  Contact_Name: User,
+  Designation: Briefcase,
+  Title: Briefcase,
+  Company: Building2,
+  Account_name: Building2,
+  Email: Mail,
+  Email_id: Mail,
+  Email_Status: Mail,
+  Corporate_Phone: Phone,
+  Personal_Phone: Phone,
+  Contact_Number_Personal: Phone,
+  Phone_Status: Phone,
+  Employees_Size: Users,
+  No_of_Employees: Users,
+  Industry: Building2,
+  Industry_client: Building2,
+  Industry_Nexuses: Building2,
+  Type_of_Company: Building2,
+  Priority: Info,
+  Sales_Manager: Briefcase,
+  Revenue: DollarSign,
+  Annual_Revenue: DollarSign,
+  Technologies: Info,
+  Person_Linkedin_Url: LinkedinIcon,
+  Website: Globe,
+  Company_Linkedin_Url: LinkedinIcon,
+  Country: MapPin,
+  Country_Contact_Person: MapPin,
+  City: MapPin,
+  State: MapPin,
+  Company_Address: MapPin,
+  Company_Headquarter: MapPin,
+  Workmates_Remark: Info,
+  TM_Remarks: Info
+};
+
+// Determine which columns should be treated as links
+const URL_COLUMNS = ['Website', 'Person_Linkedin_Url', 'Company_Linkedin_Url'];
+
+// Determine which columns might contain comma-separated values
+const MULTI_VALUE_COLUMNS = ['Technologies'];
+
 // Add this helper function at the top with other functions
 const getGeneralFilters = (data: DataRow[]) => {
   // Determine if we have standard or new column format
@@ -151,41 +280,34 @@ const getGeneralFilters = (data: DataRow[]) => {
   let employeeSizeField = hasNewColumns ? 'No_of_Employees' : 'Employees_Size';
   let revenueField = hasNewColumns ? 'Revenue' : 'Annual_Revenue';
 
-  if (hasNewColumns && !data[0]['Title'] && data[0]['Designation']) {
-    titleField = 'Designation';
+  // Map fields based on available data
+  if (hasNewColumns) {
+    if (data[0]['Designation']) titleField = 'Designation';
+    if (data[0]['Industry_client']) industryField = 'Industry_client';
+    if (data[0]['Country_Contact_Person']) countryField = 'Country_Contact_Person';
   }
 
-  if (hasNewColumns && !data[0]['Industry'] && data[0]['Industry_client']) {
-    industryField = 'Industry_client';
-  }
-
-  if (hasNewColumns && !data[0]['Country'] && data[0]['Country_Contact_Person']) {
-    countryField = 'Country_Contact_Person';
-  }
-
-  // Get unique titles and sort them
+  // Get unique values for each field
   const titles = Array.from(new Set(data.map(row => row[titleField])))
     .filter(Boolean)
     .sort();
 
-  // Get unique industries and sort them
   const industries = Array.from(new Set(data.map(row => row[industryField])))
     .filter(Boolean)
     .sort();
 
-  // Get unique countries
   const countries = Array.from(new Set(data.map(row => row[countryField])))
     .filter(Boolean)
     .sort();
 
-  // Create general employee size ranges
+  // Create employee size ranges
   const employeeSizeRanges = [
     { label: "< 100", value: "lt100" },
     { label: "100 - 500", value: "100-500" },
     { label: "500+", value: "gt500" }
   ];
 
-  // Create general revenue ranges
+  // Create revenue ranges
   const revenueRanges = [
     { label: "< 1M", value: "lt1M" },
     { label: "1M - 50M", value: "1M-50M" },
@@ -193,12 +315,11 @@ const getGeneralFilters = (data: DataRow[]) => {
   ];
 
   return {
-    titles: titles.slice(0, 5), // Limit to top 5 titles
-    industries: industries.slice(0, 5), // Limit to top 5 industries
-    countries: countries.slice(0, 5), // Limit to top 5 countries
+    titles: titles.slice(0, 5),
+    industries: industries.slice(0, 5),
+    countries: countries.slice(0, 5),
     employeeSizeRanges,
     revenueRanges,
-    // Return field names for reference
     fields: {
       title: titleField,
       industry: industryField,
@@ -407,38 +528,8 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
     ]
 
     const dataColumns: ColumnDef<DataRow>[] = availableColumns.map(columnKey => {
-      // Define the desired column order
-      const columnOrder = [
-        'S_No',
-        'Account_name',
-        'Industry_client',
-        'Industry_Nexuses',
-        'Type_of_Company',
-        'priority',
-        'Sales_Manager',
-        'No_of_Employees',
-        'Revenue',
-        'Contact_Name',
-        'Designation',
-        'Contact_Number_Personal',
-        'Phone_Status',
-        'Email_id',
-        'Email_Status',
-        'Person_Linkedin_Url',
-        'Website',
-        'Company_Linkedin_Url',
-        'Technologies',
-        'City',
-        'State',
-        'Country_Contact_Person',
-        'Company_Address',
-        'Company_Headquarter',
-        'Workmates_Remark',
-        'TM_Remarks'
-      ];
-
       // Get the index of the current column in the desired order
-      const columnIndex = columnOrder.indexOf(columnKey);
+      const columnIndex = STANDARD_COLUMNS.indexOf(columnKey);
       
       const baseColumn: Partial<ColumnDef<DataRow>> = {
         accessorKey: columnKey,
@@ -451,7 +542,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                   size="sm" 
                   className="h-8 -ml-3 data-[state=open]:bg-gray-100 font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100/50 tracking-wide text-sm"
                 >
-                  <span>{columnKey.replace(/_/g, ' ')}</span>
+                  <span>{COLUMN_DISPLAY_NAMES[columnKey] || columnKey.replace(/_/g, ' ')}</span>
                   <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
                 </Button>
               </DropdownMenuTrigger>
@@ -473,7 +564,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                 <DropdownMenuLabel className="text-sm text-gray-500 font-normal">Filter</DropdownMenuLabel>
                 <div className="p-2">
                   <Input
-                    placeholder={`Filter ${columnKey.replace(/_/g, ' ')}...`}
+                    placeholder={`Filter ${COLUMN_DISPLAY_NAMES[columnKey] || columnKey.replace(/_/g, ' ')}...`}
                     value={(column.getFilterValue() as string) ?? ""}
                     onChange={(event) =>
                       column.setFilterValue(event.target.value)

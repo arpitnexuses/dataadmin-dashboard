@@ -53,81 +53,98 @@ export default function DashboardPage() {
       if (response.ok) {
         const data = await response.json()
         
-        // Process titles
+        // Process data for analytics
         const titleCounts: { [key: string]: number } = {}
         const industryCounts: { [key: string]: number } = {}
         const countryCounts: { [key: string]: number } = {}
         const technologyCounts: { [key: string]: number } = {}
+        const employeeSizeCounts: { [key: string]: number } = {}
+        const revenueCounts: { [key: string]: number } = {}
         let totalEmails = 0
         let totalPhones = 0
 
-        // Title abbreviation mapping
-        const titleAbbreviations: { [key: string]: string } = {
-          "Chief Technology Officer": "CTO",
-          "Chief Information Officer": "CIO",
-          "Chief Information Security Officer": "CISO",
-          "Chief Technical Officer": "CTO",
-          "Director of Information Technology": "IT Director",
-          "Information Technology Manager": "IT Manager",
-          "Information Technology Director": "IT Director",
-          "Vice President Information Technology": "VP of IT",
-          "Information Technology Project Manager": "IT Project Manager",
-        }
-
         data.dataFiles?.forEach((file: any) => {
           file.data?.forEach((record: any) => {
-            // Count emails separately
-            if (record.email || record.Email || record.EMAIL) {
+            // Count emails
+            if (record.Email || record.Email_id) {
               totalEmails++
             }
             
-            // Count phone numbers separately - only if Personal_Phone exists and is not "-"
-            if (record.Personal_Phone && record.Personal_Phone !== "-") {
+            // Count phone numbers
+            if (record.Personal_Phone || record.Contact_Number_Personal) {
               totalPhones++
             }
 
-            // Process titles with abbreviations
-            let title = record.title || record.Title || record.TITLE || "Other"
-            title = titleAbbreviations[title] || title
+            // Process titles
+            const title = record.Title || record.Designation || "Other"
             titleCounts[title] = (titleCounts[title] || 0) + 1
 
             // Process industries
-            const industry = record.industry || record.Industry || record.INDUSTRY || "Other"
+            const industry = record.Industry || record.Industry_client || record.Industry_Nexuses || "Other"
             industryCounts[industry] = (industryCounts[industry] || 0) + 1
 
             // Process countries
-            const country = record.country || record.Country || record.COUNTRY || "Other"
+            const country = record.Country || record.Country_Contact_Person || "Other"
             countryCounts[country] = (countryCounts[country] || 0) + 1
 
-            // Process technologies - split and count individual technologies
-            const technology = record.technologies || record.Technologies || record.TECHNOLOGIES || ""
-            if (typeof technology === 'string' && technology.trim()) {
-              // Split by comma and clean up each technology
-              const individualTechs = technology.split(',').map(tech => tech.trim()).filter(tech => tech)
-              individualTechs.forEach(tech => {
+            // Process technologies
+            const technologies = record.Technologies || ""
+            if (typeof technologies === 'string' && technologies.trim()) {
+              technologies.split(',').map(tech => tech.trim()).filter(tech => tech).forEach(tech => {
                 technologyCounts[tech] = (technologyCounts[tech] || 0) + 1
               })
+            }
+
+            // Process employee size
+            const employeeSize = record.No_of_Employees || record.Employees_Size
+            if (employeeSize) {
+              let sizeRange = "Other"
+              const size = parseInt(employeeSize)
+              if (!isNaN(size)) {
+                if (size < 100) sizeRange = "< 100"
+                else if (size <= 500) sizeRange = "100 - 500"
+                else sizeRange = "500+"
+              }
+              employeeSizeCounts[sizeRange] = (employeeSizeCounts[sizeRange] || 0) + 1
+            }
+
+            // Process revenue
+            const revenue = record.Revenue || record.Annual_Revenue
+            if (revenue) {
+              let revenueRange = "Other"
+              const rev = parseFloat(revenue.replace(/[^0-9.]/g, ''))
+              if (!isNaN(rev)) {
+                if (rev < 1000000) revenueRange = "< $1M"
+                else if (rev <= 50000000) revenueRange = "$1M - $50M"
+                else revenueRange = "> $50M"
+              }
+              revenueCounts[revenueRange] = (revenueCounts[revenueRange] || 0) + 1
             }
           })
         })
 
-        // Convert title counts to array and sort
+        // Convert counts to arrays and sort
         const titleDistribution = Object.entries(titleCounts)
           .map(([name, count]) => ({ name, count }))
           .sort((a, b) => b.count - a.count)
 
-        // Convert industry counts to array and sort
         const industries = Object.entries(industryCounts)
           .map(([name, value]) => ({ name, value }))
           .sort((a, b) => b.value - a.value)
 
-        // Convert country counts to array and sort
         const countries = Object.entries(countryCounts)
           .map(([name, value]) => ({ name, value }))
           .sort((a, b) => b.value - a.value)
 
-        // Convert technology counts to array and sort
         const technologies = Object.entries(technologyCounts)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value)
+
+        const employeeSize = Object.entries(employeeSizeCounts)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value)
+
+        const revenueSize = Object.entries(revenueCounts)
           .map(([name, value]) => ({ name, value }))
           .sort((a, b) => b.value - a.value)
 
@@ -145,22 +162,8 @@ export default function DashboardPage() {
             industries: industries,
             countries: countries,
             technologies: technologies,
-            employeeSize: [
-              { name: "1-50", value: 85 },
-              { name: "51-200", value: 23 },
-              { name: "201-500", value: 18 },
-              { name: "501-1000", value: 14 },
-              { name: "1001-5000", value: 19 },
-              { name: "5000+", value: 35 }
-            ],
-            revenueSize: [
-              { name: "< $1M", value: 65 },
-              { name: "$1M - $10M", value: 45 },
-              { name: "$10M - $50M", value: 38 },
-              { name: "$50M - $100M", value: 24 },
-              { name: "$100M - $500M", value: 29 },
-              { name: "> $500M", value: 15 }
-            ],
+            employeeSize: employeeSize,
+            revenueSize: revenueSize,
             downloadsByMonth: [
               { name: "Jan", total: 45 },
               { name: "Feb", total: 38 },

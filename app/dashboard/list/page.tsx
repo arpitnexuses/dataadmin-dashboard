@@ -14,21 +14,7 @@ interface File {
 }
 
 interface DataRow {
-  First_Name: string
-  Last_Name: string
-  Title: string
-  Company: string
-  Email: string
-  Corporate_Phone: string
-  Personal_Phone: string
-  Employees_Size: string
-  Industry: string
-  Person_Linkedin_Url: string
-  Website: string
-  Company_Linkedin_Url: string
-  Country: string
-  Technologies: string
-  Annual_Revenue: string
+  [key: string]: string;
 }
 
 export default function ListPage() {
@@ -44,6 +30,13 @@ export default function ListPage() {
         const response = await fetch("/api/user/data")
         if (response.ok) {
           const data = await response.json()
+          
+          // Debug: Log the first file's data to see what columns are available
+          if (data.dataFiles && data.dataFiles.length > 0 && data.dataFiles[0].data.length > 0) {
+            console.log("Available columns:", Object.keys(data.dataFiles[0].data[0]));
+            console.log("First row of data:", data.dataFiles[0].data[0]);
+          }
+          
           setFiles(data.dataFiles.map((file: any) => ({
             id: file.id,
             name: file.title,
@@ -91,7 +84,7 @@ export default function ListPage() {
                   id: 'all-files',
                   name: 'All Files',
                   description: 'Combined data from all files',
-                  data: files.reduce<DataRow[]>((acc, file) => [...acc, ...file.data], [])
+                  data: files.reduce<any[]>((acc, file) => [...acc, ...file.data], [])
                 }
                 handleFileClick(allFilesData)
               }}
@@ -188,6 +181,7 @@ export default function ListPage() {
             </button>
             <h1 className="text-3xl font-bold">{selectedFile.name}</h1>
           </div>
+          
           <DataTable 
             selectedFileIndex={selectedFile.id === 'all-files' ? 0 : files.findIndex(f => f.id === selectedFile.id)}
             activeFilters={activeFilters}

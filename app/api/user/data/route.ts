@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       .populate({
         path: "dataFiles.fileId",
         model: DataFile,
-        select: 'filename originalName data.First_Name data.Last_Name data.Title data.Company data.Email data.Corporate_Phone data.Personal_Phone data.Employees_Size data.Industry data.Person_Linkedin_Url data.Website data.Company_Linkedin_Url data.Country data.Technologies data.Annual_Revenue'
+        select: 'filename originalName data columns'
       })
       .lean()
       .exec()
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       if (legacyUser && 'dataFileId' in legacyUser && !('dataFiles' in legacyUser)) {
         // console.log("Migrating user to new schema")
         const dataFile = await DataFile.findById(legacyUser.dataFileId)
-          .select('filename originalName data.First_Name data.Last_Name data.Title data.Company data.Email data.Corporate_Phone data.Personal_Phone data.Employees_Size data.Industry data.Person_Linkedin_Url data.Website data.Company_Linkedin_Url data.Country data.Technologies data.Annual_Revenue')
+          .select('filename originalName data columns')
         if (dataFile) {
           // Update user to new schema
           await User.findByIdAndUpdate(legacyUser._id, {
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
           .populate({
             path: "dataFiles.fileId",
             model: DataFile,
-            select: 'filename originalName data.First_Name data.Last_Name data.Title data.Company data.Email data.Corporate_Phone data.Personal_Phone data.Employees_Size data.Industry data.Person_Linkedin_Url data.Website data.Company_Linkedin_Url data.Country data.Technologies data.Annual_Revenue'
+            select: 'filename originalName data columns'
           })
           .lean()
           .exec()
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
         if (legacyUser && 'dataFileId' in legacyUser && !('dataFiles' in legacyUser)) {
           // console.log("Migrating user to new schema")
           const dataFile = await DataFile.findById(legacyUser.dataFileId)
-            .select('filename originalName data.First_Name data.Last_Name data.Title data.Company data.Email data.Corporate_Phone data.Personal_Phone data.Employees_Size data.Industry data.Person_Linkedin_Url data.Website data.Company_Linkedin_Url data.Country data.Technologies data.Annual_Revenue')
+            .select('filename originalName data columns')
           if (dataFile) {
             // Update user to new schema
             await User.findByIdAndUpdate(legacyUser._id, {
@@ -152,32 +152,27 @@ export async function GET(request: NextRequest) {
       credits: user.credits || 0,
       requestCount: requestCount || 0,
       dataFiles: user.dataFiles.map((file) => {
-        // console.log("Processing file:", file.fileId._id.toString())
-        // console.log("File data sample:", file.fileId.data?.[0])
+        // Debug logging for column order issue
+        // console.log("Original columns from DB:", file.fileId.columns);
+        // console.log("Sample data keys:", Object.keys(file.fileId.data?.[0] || {}));
+        
         return {
           id: file.fileId._id.toString(),
           title: file.title,
           filename: file.fileId.originalName,
-          data: Array.isArray(file.fileId.data) ? file.fileId.data.map(item => ({
-            First_Name: item.First_Name || '',
-            Last_Name: item.Last_Name || '',
-            Title: item.Title || '',
-            Company: item.Company || '',
-            Email: item.Email || '',
-            Corporate_Phone: item.Corporate_Phone || '',
-            Personal_Phone: item.Personal_Phone || '',
-            Employees_Size: item.Employees_Size || '',
-            Industry: item.Industry || '',
-            Person_Linkedin_Url: item.Person_Linkedin_Url || '',
-            Website: item.Website || '',
-            Company_Linkedin_Url: item.Company_Linkedin_Url || '',
-            Country: item.Country || '',
-            Technologies: item.Technologies || '',
-            Annual_Revenue: item.Annual_Revenue || ''
-          })) : [],
+          columns: Array.isArray(file.fileId.columns) ? file.fileId.columns : [],
+          data: Array.isArray(file.fileId.data) ? file.fileId.data : [],
         }
       }),
     }
+
+    // // More detailed debug logging
+    // if (response.dataFiles.length > 0) {
+    //   console.log("API Response - First file columns:", response.dataFiles[0].columns);
+    //   if (response.dataFiles[0].data.length > 0) {
+    //     console.log("API Response - First row keys:", Object.keys(response.dataFiles[0].data[0]));
+    //   }
+    // }
 
     // console.log("Final response data sample:", response.dataFiles[0]?.data?.[0])
     return NextResponse.json(response)

@@ -402,10 +402,44 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
         },
         enableSorting: false,
         enableHiding: false,
+        meta: { order: -1 } // Give it the lowest order to ensure it's first
       }
     ]
 
     const dataColumns: ColumnDef<DataRow>[] = availableColumns.map(columnKey => {
+      // Define the desired column order
+      const columnOrder = [
+        'S_No',
+        'Account_name',
+        'Industry_client',
+        'Industry_Nexuses',
+        'Type_of_Company',
+        'priority',
+        'Sales_Manager',
+        'No_of_Employees',
+        'Revenue',
+        'Contact_Name',
+        'Designation',
+        'Contact_Number_Personal',
+        'Phone_Status',
+        'Email_id',
+        'Email_Status',
+        'Person_Linkedin_Url',
+        'Website',
+        'Company_Linkedin_Url',
+        'Technologies',
+        'City',
+        'State',
+        'Country_Contact_Person',
+        'Company_Address',
+        'Company_Headquarter',
+        'Workmates_Remark',
+        'TM_Remarks'
+      ];
+
+      // Get the index of the current column in the desired order
+      const columnIndex = columnOrder.indexOf(columnKey);
+      
       const baseColumn: Partial<ColumnDef<DataRow>> = {
         accessorKey: columnKey,
         header: ({ column }) => {
@@ -451,7 +485,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
             </DropdownMenu>
           )
         },
-        cell: ({ row }) => {
+        cell: ({ row }: { row: Row<DataRow> }) => {
           const value = row.getValue(columnKey) as string;
           if ((columnKey === "Industry" || columnKey === "Industry_client" || columnKey === "Industry_Nexuses" || 
                columnKey === "Title" || columnKey === "Designation" || 
@@ -467,7 +501,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
               
               return (
                 <div className="flex items-center gap-1.5 max-w-[350px]">
-                  {techs.slice(0, MAX_VISIBLE).map((tech, index) => (
+                  {techs.slice(0, MAX_VISIBLE).map((tech: string, index: number) => (
                     <div 
                       key={index}
                       className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap border"
@@ -575,10 +609,25 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
         baseColumn.filterFn = revenueFilter;
       }
 
-      return baseColumn as ColumnDef<DataRow>;
-    })
+      return {
+        ...baseColumn,
+        // Add a sort order based on the column's position in the desired order
+        meta: {
+          order: columnIndex === -1 ? 999 : columnIndex // Put unknown columns at the end
+        }
+      } as ColumnDef<DataRow>;
+    });
 
-    return [...defaultColumns, ...dataColumns]
+    // Sort the columns based on the desired order
+    const sortedColumns = [...defaultColumns, ...dataColumns].sort((a, b) => {
+      const aMeta = a.meta as { order?: number };
+      const bMeta = b.meta as { order?: number };
+      const aOrderValue = aMeta?.order ?? 999;
+      const bOrderValue = bMeta?.order ?? 999;
+      return aOrderValue - bOrderValue;
+    });
+
+    return sortedColumns;
   }, [userData, selectedFileIndex])
 
   // Apply filters to the data
@@ -927,35 +976,33 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                               // Check what columns are available in the data
                               const hasColumn = (col: string) => table.getAllLeafColumns().some(column => column.id === col);
                               
-                              // Add name columns
-                              if (hasColumn("First_Name")) essentialColumns.push("First_Name");
-                              if (hasColumn("Last_Name")) essentialColumns.push("Last_Name");
-                              if (hasColumn("Contact_Name")) essentialColumns.push("Contact_Name");
-                              
-                              // Add company columns
-                              if (hasColumn("Company")) essentialColumns.push("Company");
+                              // Add columns in the specified order
+                              if (hasColumn("S_No")) essentialColumns.push("S_No");
                               if (hasColumn("Account_name")) essentialColumns.push("Account_name");
-                              
-                              // Add title/role columns
-                              if (hasColumn("Title")) essentialColumns.push("Title");
-                              if (hasColumn("Designation")) essentialColumns.push("Designation");
-                              
-                              // Add contact info columns
-                              if (hasColumn("Email")) essentialColumns.push("Email");
-                              if (hasColumn("Email_id")) essentialColumns.push("Email_id");
-                              if (hasColumn("Corporate_Phone")) essentialColumns.push("Corporate_Phone");
-                              if (hasColumn("Personal_Phone")) essentialColumns.push("Personal_Phone");
-                              if (hasColumn("Contact_Number_Personal")) essentialColumns.push("Contact_Number_Personal");
-                              
-                              // Add location columns
-                              if (hasColumn("Country")) essentialColumns.push("Country");
-                              if (hasColumn("Country_Contact_Person")) essentialColumns.push("Country_Contact_Person");
-                              if (hasColumn("City")) essentialColumns.push("City");
-                              
-                              // Add industry and company data
-                              if (hasColumn("Industry")) essentialColumns.push("Industry");
                               if (hasColumn("Industry_client")) essentialColumns.push("Industry_client");
+                              if (hasColumn("Industry_Nexuses")) essentialColumns.push("Industry_Nexuses");
                               if (hasColumn("Type_of_Company")) essentialColumns.push("Type_of_Company");
+                              if (hasColumn("priority")) essentialColumns.push("priority");
+                              if (hasColumn("Sales_Manager")) essentialColumns.push("Sales_Manager");
+                              if (hasColumn("No_of_Employees")) essentialColumns.push("No_of_Employees");
+                              if (hasColumn("Revenue")) essentialColumns.push("Revenue");
+                              if (hasColumn("Contact_Name")) essentialColumns.push("Contact_Name");
+                              if (hasColumn("Designation")) essentialColumns.push("Designation");
+                              if (hasColumn("Contact_Number_Personal")) essentialColumns.push("Contact_Number_Personal");
+                              if (hasColumn("Phone_Status")) essentialColumns.push("Phone_Status");
+                              if (hasColumn("Email_id")) essentialColumns.push("Email_id");
+                              if (hasColumn("Email_Status")) essentialColumns.push("Email_Status");
+                              if (hasColumn("Person_Linkedin_Url")) essentialColumns.push("Person_Linkedin_Url");
+                              if (hasColumn("Website")) essentialColumns.push("Website");
+                              if (hasColumn("Company_Linkedin_Url")) essentialColumns.push("Company_Linkedin_Url");
+                              if (hasColumn("Technologies")) essentialColumns.push("Technologies");
+                              if (hasColumn("City")) essentialColumns.push("City");
+                              if (hasColumn("State")) essentialColumns.push("State");
+                              if (hasColumn("Country_Contact_Person")) essentialColumns.push("Country_Contact_Person");
+                              if (hasColumn("Company_Address")) essentialColumns.push("Company_Address");
+                              if (hasColumn("Company_Headquarter")) essentialColumns.push("Company_Headquarter");
+                              if (hasColumn("Workmates_Remark")) essentialColumns.push("Workmates_Remark");
+                              if (hasColumn("TM_Remarks")) essentialColumns.push("TM_Remarks");
                               
                               const newVisibility: VisibilityState = {};
                               
@@ -1601,35 +1648,33 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                           // Check what columns are available in the data
                           const hasColumn = (col: string) => table.getAllLeafColumns().some(column => column.id === col);
                           
-                          // Add name columns
-                          if (hasColumn("First_Name")) essentialColumns.push("First_Name");
-                          if (hasColumn("Last_Name")) essentialColumns.push("Last_Name");
-                          if (hasColumn("Contact_Name")) essentialColumns.push("Contact_Name");
-                          
-                          // Add company columns
-                          if (hasColumn("Company")) essentialColumns.push("Company");
+                          // Add columns in the specified order
+                          if (hasColumn("S_No")) essentialColumns.push("S_No");
                           if (hasColumn("Account_name")) essentialColumns.push("Account_name");
-                          
-                          // Add title/role columns
-                          if (hasColumn("Title")) essentialColumns.push("Title");
-                          if (hasColumn("Designation")) essentialColumns.push("Designation");
-                          
-                          // Add contact info columns
-                          if (hasColumn("Email")) essentialColumns.push("Email");
-                          if (hasColumn("Email_id")) essentialColumns.push("Email_id");
-                          if (hasColumn("Corporate_Phone")) essentialColumns.push("Corporate_Phone");
-                          if (hasColumn("Personal_Phone")) essentialColumns.push("Personal_Phone");
-                          if (hasColumn("Contact_Number_Personal")) essentialColumns.push("Contact_Number_Personal");
-                          
-                          // Add location columns
-                          if (hasColumn("Country")) essentialColumns.push("Country");
-                          if (hasColumn("Country_Contact_Person")) essentialColumns.push("Country_Contact_Person");
-                          if (hasColumn("City")) essentialColumns.push("City");
-                          
-                          // Add industry and company data
-                          if (hasColumn("Industry")) essentialColumns.push("Industry");
                           if (hasColumn("Industry_client")) essentialColumns.push("Industry_client");
+                          if (hasColumn("Industry_Nexuses")) essentialColumns.push("Industry_Nexuses");
                           if (hasColumn("Type_of_Company")) essentialColumns.push("Type_of_Company");
+                          if (hasColumn("priority")) essentialColumns.push("priority");
+                          if (hasColumn("Sales_Manager")) essentialColumns.push("Sales_Manager");
+                          if (hasColumn("No_of_Employees")) essentialColumns.push("No_of_Employees");
+                          if (hasColumn("Revenue")) essentialColumns.push("Revenue");
+                          if (hasColumn("Contact_Name")) essentialColumns.push("Contact_Name");
+                          if (hasColumn("Designation")) essentialColumns.push("Designation");
+                          if (hasColumn("Contact_Number_Personal")) essentialColumns.push("Contact_Number_Personal");
+                          if (hasColumn("Phone_Status")) essentialColumns.push("Phone_Status");
+                          if (hasColumn("Email_id")) essentialColumns.push("Email_id");
+                          if (hasColumn("Email_Status")) essentialColumns.push("Email_Status");
+                          if (hasColumn("Person_Linkedin_Url")) essentialColumns.push("Person_Linkedin_Url");
+                          if (hasColumn("Website")) essentialColumns.push("Website");
+                          if (hasColumn("Company_Linkedin_Url")) essentialColumns.push("Company_Linkedin_Url");
+                          if (hasColumn("Technologies")) essentialColumns.push("Technologies");
+                          if (hasColumn("City")) essentialColumns.push("City");
+                          if (hasColumn("State")) essentialColumns.push("State");
+                          if (hasColumn("Country_Contact_Person")) essentialColumns.push("Country_Contact_Person");
+                          if (hasColumn("Company_Address")) essentialColumns.push("Company_Address");
+                          if (hasColumn("Company_Headquarter")) essentialColumns.push("Company_Headquarter");
+                          if (hasColumn("Workmates_Remark")) essentialColumns.push("Workmates_Remark");
+                          if (hasColumn("TM_Remarks")) essentialColumns.push("TM_Remarks");
                           
                           const newVisibility: VisibilityState = {};
                           

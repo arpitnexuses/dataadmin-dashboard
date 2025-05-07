@@ -12,24 +12,7 @@ interface RowDetailsModalProps {
 
 // Map column names to icons
 const COLUMN_ICONS: Record<string, any> = {
-  // Original data format
-  First_Name: Briefcase,
-  Last_Name: Briefcase,
-  Title: Briefcase,
-  Company: Building2,
-  Email: Mail,
-  Corporate_Phone: Phone,
-  Personal_Phone: Phone,
-  Employees_Size: Users,
-  Industry: Building2,
-  Person_Linkedin_Url: LinkedinIcon,
-  Website: Globe,
-  Company_Linkedin_Url: LinkedinIcon,
-  Country: MapPin,
-  Technologies: Info,
-  Annual_Revenue: DollarSign,
-  
-  // New data format
+  S_No: Info,
   Account_name: Building2,
   Industry_client: Building2,
   Industry_Nexuses: Building2,
@@ -44,6 +27,10 @@ const COLUMN_ICONS: Record<string, any> = {
   Phone_Status: Phone,
   Email_id: Mail,
   Email_Status: Mail,
+  Person_Linkedin_Url: LinkedinIcon,
+  Website: Globe,
+  Company_Linkedin_Url: LinkedinIcon,
+  Technologies: Info,
   City: MapPin,
   State: MapPin,
   Country_Contact_Person: MapPin,
@@ -55,23 +42,6 @@ const COLUMN_ICONS: Record<string, any> = {
 
 // Map column names to friendly display names
 const COLUMN_DISPLAY_NAMES: Record<string, string> = {
-  First_Name: "First Name",
-  Last_Name: "Last Name",
-  Title: "Title",
-  Company: "Company",
-  Email: "Email",
-  Corporate_Phone: "Corporate Phone",
-  Personal_Phone: "Personal Phone",
-  Employees_Size: "Employee Size",
-  Industry: "Industry",
-  Person_Linkedin_Url: "LinkedIn Profile",
-  Website: "Website",
-  Company_Linkedin_Url: "Company LinkedIn",
-  Country: "Country",
-  Technologies: "Technologies",
-  Annual_Revenue: "Annual Revenue",
-  
-  // New data format
   S_No: "S. No.",
   Account_name: "Account Name",
   Industry_client: "Industry (Client)",
@@ -87,6 +57,10 @@ const COLUMN_DISPLAY_NAMES: Record<string, string> = {
   Phone_Status: "Phone Status",
   Email_id: "Email ID",
   Email_Status: "Email Status",
+  Person_Linkedin_Url: "LinkedIn Profile",
+  Website: "Website",
+  Company_Linkedin_Url: "Company LinkedIn",
+  Technologies: "Technologies",
   City: "City",
   State: "State",
   Country_Contact_Person: "Country (Contact Person)",

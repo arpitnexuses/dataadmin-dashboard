@@ -8,24 +8,6 @@ import * as XLSX from 'xlsx'
 
 // All supported columns - all are optional
 const ALL_SUPPORTED_COLUMNS = [
-  // Original columns
-  'First_Name',
-  'Last_Name',
-  'Title',
-  'Company',
-  'Email',
-  'Corporate_Phone',
-  'Personal_Phone',
-  'Employees_Size',
-  'Industry',
-  'Person_Linkedin_Url',
-  'Website',
-  'Company_Linkedin_Url',
-  'Country',
-  'Technologies',
-  'Annual_Revenue',
-  
-  // New columns
   'S_No',
   'Account_name',
   'Industry_client',
@@ -41,6 +23,10 @@ const ALL_SUPPORTED_COLUMNS = [
   'Phone_Status',
   'Email_id',
   'Email_Status',
+  'Person_Linkedin_Url',
+  'Website',
+  'Company_Linkedin_Url',
+  'Technologies',
   'City',
   'State',
   'Country_Contact_Person',

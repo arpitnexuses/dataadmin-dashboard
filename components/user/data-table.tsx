@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Download, LogOut, Eye, EyeOff } from "lucide-react"
+import { Download, Eye, Search, Filter, ChevronDown, AlertCircle,
+  Building2, Mail, Phone, Users, Globe, LinkedinIcon, DollarSign, Briefcase, MapPin, Info, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -12,10 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import * as XLSX from 'xlsx'
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -26,13 +24,10 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  Column,
-  HeaderGroup,
   Row,
-  Cell,
   FilterFn,
-  FilterFnOption,
   VisibilityState,
+  ColumnPinningState,
 } from "@tanstack/react-table"
 import { Input } from "@/components/ui/input"
 import {
@@ -43,9 +38,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown } from "lucide-react"
-import { Search } from "lucide-react"
-import { Filter } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Dialog,
@@ -55,12 +47,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { Building2, Mail, Phone, Users, Globe, LinkedinIcon, DollarSign, Briefcase, MapPin, Info, User } from "lucide-react"
-import { motion } from "framer-motion"
-import { BarChart, PieChart, LineChart } from "lucide-react"
-import { AnalyticsModal } from "./analytics-modal"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
 import { RowDetailsModal } from "./row-details-modal"
 import {
   Pagination,
@@ -142,39 +129,76 @@ interface DataTableProps {
 
 // Define the standard column order and mapping
 const STANDARD_COLUMNS = [
+  // Original columns (commented out)
+  // 'S_No',
+  // 'First_Name',
+  // 'Last_Name',
+  // 'Contact_Name',
+  // 'Designation',
+  // 'Title',
+  // 'Company',
+  // 'Account_name',
+  // 'Email',
+  // 'Email_id',
+  // 'Email_Status',
+  // 'Corporate_Phone',
+  // 'Personal_Phone',
+  // 'Contact_Number_Personal',
+  // 'Phone_Status',
+  // 'Employees_Size',
+  // 'No_of_Employees',
+  // 'Industry',
+  // 'Industry_client',
+  // 'Industry_Nexuses',
+  // 'Type_of_Company',
+  // 'Priority',
+  // 'Sales_Manager',
+  // 'Revenue',
+  // 'Annual_Revenue',
+  // 'Technologies',
+  // 'Person_Linkedin_Url',
+  // 'Website',
+  // 'Company_Linkedin_Url',
+  // 'Country',
+  // 'Country_Contact_Person',
+  // 'City',
+  // 'State',
+  // 'Company_Address',
+  // 'Company_Headquarter',
+  // 'Workmates_Remark',
+  // 'TM_Remarks',
+
+  // New combined columns with standardized names
   'S_No',
-  'First_Name',
-  'Last_Name',
-  'Contact_Name',
-  'Designation',
+  'Full_Name',
   'Title',
-  'Company',
-  'Account_name',
+  'Company_Name',
+  'Account_Name',
   'Email',
-  'Email_id',
+  'Email_ID',
   'Email_Status',
-  'Corporate_Phone',
+  'Seniority',
+  'Department',
   'Personal_Phone',
-  'Contact_Number_Personal',
+  'Company_Phone',
   'Phone_Status',
-  'Employees_Size',
-  'No_of_Employees',
+  'Employee_Count',
   'Industry',
-  'Industry_client',
+  'Industry_Client',
   'Industry_Nexuses',
-  'Type_of_Company',
+  'Company_Type',
   'Priority',
   'Sales_Manager',
   'Revenue',
   'Annual_Revenue',
   'Technologies',
-  'Person_Linkedin_Url',
+  'Person_LinkedIn_URL',
   'Website',
-  'Company_Linkedin_Url',
-  'Country',
-  'Country_Contact_Person',
+  'Company_LinkedIn_URL',
   'City',
   'State',
+  'Contact_Country',
+  'Company_Country',
   'Company_Address',
   'Company_Headquarter',
   'Workmates_Remark',
@@ -184,38 +208,35 @@ const STANDARD_COLUMNS = [
 // Map column names to their display names
 const COLUMN_DISPLAY_NAMES: Record<string, string> = {
   S_No: "S. No.",
-  First_Name: "First Name",
-  Last_Name: "Last Name",
-  Contact_Name: "Contact Name",
-  Designation: "Designation",
+  Full_Name: "Full Name",
   Title: "Title",
-  Company: "Company",
-  Account_name: "Account Name",
+  Company_Name: "Company Name",
+  Account_Name: "Account Name",
   Email: "Email",
-  Email_id: "Email ID",
+  Email_ID: "Email ID",
   Email_Status: "Email Status",
-  Corporate_Phone: "Corporate Phone",
+  Seniority: "Seniority",
+  Department: "Department",
   Personal_Phone: "Personal Phone",
-  Contact_Number_Personal: "Contact Number (Personal)",
+  Company_Phone: "Company Phone",
   Phone_Status: "Phone Status",
-  Employees_Size: "Employees Size",
-  No_of_Employees: "Number of Employees",
+  Employee_Count: "Employee Count",
   Industry: "Industry",
-  Industry_client: "Industry (Client)",
+  Industry_Client: "Industry (Client)",
   Industry_Nexuses: "Industry (Nexuses)",
-  Type_of_Company: "Company Type",
+  Company_Type: "Company Type",
   Priority: "Priority",
   Sales_Manager: "Sales Manager",
   Revenue: "Revenue",
   Annual_Revenue: "Annual Revenue",
   Technologies: "Technologies",
-  Person_Linkedin_Url: "LinkedIn Profile",
+  Person_LinkedIn_URL: "LinkedIn Profile",
   Website: "Website",
-  Company_Linkedin_Url: "Company LinkedIn",
-  Country: "Country",
-  Country_Contact_Person: "Country (Contact Person)",
+  Company_LinkedIn_URL: "Company LinkedIn",
   City: "City",
   State: "State",
+  Contact_Country: "Contact Country",
+  Company_Country: "Company Country",
   Company_Address: "Company Address",
   Company_Headquarter: "Company Headquarter",
   Workmates_Remark: "Workmates Remark",
@@ -375,8 +396,6 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
   const [globalFilter, setGlobalFilter] = useState("")
   const [selectedRow, setSelectedRow] = useState<DataRow | null>(null)
-  const [isFilterOpen, setIsFilterOpenState] = useState(false)
-  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [showExportConfirm, setShowExportConfirm] = useState(false)
   const [showNoSelectionWarning, setShowNoSelectionWarning] = useState(false)
@@ -388,6 +407,9 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
   const [pageIndex, setPageIndex] = useState<number>(0)
   const [showReviewSelected, setShowReviewSelected] = useState(false)
   const [exportFormat, setExportFormat] = useState<'xlsx' | 'csv'>('xlsx')
+  const [columnPinning, setColumnPinning] = useState<ColumnPinningState>({
+    left: ['select'], // Select column is pinned by default
+  })
 
   // Add useEffect for auto-closing export success dialog
   useEffect(() => {
@@ -484,12 +506,17 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
     // Get the first row to determine available columns
     const firstRow = userData.dataFiles[selectedFileIndex].data[0];
     
-    // Use the ordered columns from the file if available, otherwise fall back to Object.keys
-    const fileColumns = userData.dataFiles[selectedFileIndex].columns;
+    // Get all available columns from the data
+    const availableColumns = Object.keys(firstRow);
     
-    const availableColumns = fileColumns && fileColumns.length > 0 
-      ? fileColumns 
-      : Object.keys(firstRow);
+    // Filter STANDARD_COLUMNS to only include columns that exist in the data
+    const orderedColumns = STANDARD_COLUMNS.filter(col => availableColumns.includes(col));
+    
+    // Add any remaining columns that aren't in STANDARD_COLUMNS
+    const remainingColumns = availableColumns.filter(col => !STANDARD_COLUMNS.includes(col));
+    
+    // Combine ordered columns with remaining columns
+    const finalColumns = [...orderedColumns, ...remainingColumns];
     
     const defaultColumns: ColumnDef<DataRow>[] = [
       {
@@ -527,7 +554,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
       }
     ]
 
-    const dataColumns: ColumnDef<DataRow>[] = availableColumns.map(columnKey => {
+    const dataColumns: ColumnDef<DataRow>[] = finalColumns.map(columnKey => {
       // Get the index of the current column in the desired order
       const columnIndex = STANDARD_COLUMNS.indexOf(columnKey);
       
@@ -540,7 +567,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-8 -ml-3 data-[state=open]:bg-gray-100 font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100/50 tracking-wide text-sm"
+                  className="h-8 -ml-3 font-medium text-gray-100 bg-[#8370FC] hover:text-white hover:bg-[#6f5de7] tracking-wide text-sm"
                 >
                   <span>{COLUMN_DISPLAY_NAMES[columnKey] || columnKey.replace(/_/g, ' ')}</span>
                   <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
@@ -550,13 +577,13 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                 <DropdownMenuLabel className="text-sm text-gray-500 font-normal">Sort</DropdownMenuLabel>
                 <DropdownMenuItem 
                   onClick={() => column.toggleSorting(false)}
-                  className="text-sm hover:bg-gray-50 focus:bg-gray-50 cursor-pointer"
+                  className="text-sm hover:bg-[#8370FC]/10 focus:bg-[#8370FC]/10 cursor-pointer"
                 >
                   Ascending
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => column.toggleSorting(true)}
-                  className="text-sm hover:bg-gray-50 focus:bg-gray-50 cursor-pointer"
+                  className="text-sm hover:bg-[#8370FC]/10 focus:bg-[#8370FC]/10 cursor-pointer"
                 >
                   Descending
                 </DropdownMenuItem>
@@ -595,12 +622,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                   {techs.slice(0, MAX_VISIBLE).map((tech: string, index: number) => (
                     <div 
                       key={index}
-                      className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap border"
-                      style={{ 
-                        backgroundColor: `${getColumnColor(tech, columnKey)}10`, // Use 10% opacity
-                        color: getColumnColor(tech, columnKey),
-                        borderColor: `${getColumnColor(tech, columnKey)}30`, // 30% opacity border
-                      }}
+                      className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap border border-gray-200 bg-gray-50 text-gray-700"
                     >
                       {tech}
                     </div>
@@ -625,8 +647,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                   title={value} // Show full text on hover
                 >
                   <div 
-                    className="w-2 h-2 rounded-full mr-2 flex-shrink-0"
-                    style={{ backgroundColor: getColumnColor(value, columnKey) }}
+                    className="w-2 h-2 rounded-full mr-2 flex-shrink-0 bg-[#8370FC]"
                   />
                   <span className="text-sm text-gray-700 font-medium truncate">
                     {value}
@@ -638,11 +659,8 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
             // Industry, Country and other badge columns
             return (
               <div 
-                className="px-2 py-0.5 rounded-md inline-block max-w-[200px] text-xs font-medium border"
+                className="px-2 py-0.5 rounded-md inline-block max-w-[200px] text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700"
                 style={{ 
-                  backgroundColor: `${bgColor}10`, // Use 10% opacity for background
-                  color: bgColor,
-                  borderColor: `${bgColor}30`, // 30% opacity border
                   textOverflow: 'ellipsis',
                   overflow: 'hidden',
                   whiteSpace: 'nowrap'
@@ -658,22 +676,76 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
           if (columnKey === "Email" || columnKey === "Email_id" || columnKey.toLowerCase().includes('email')) {
             return (
               <div 
-                className="text-black h-6 flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[230px]"
+                className="text-black h-6 flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[230px] gap-1.5 group"
                 title={value}
               >
-                {value}
+                <Mail className="h-3.5 w-3.5 text-[#8370FC] flex-shrink-0 opacity-70 group-hover:opacity-100" />
+                <span className="truncate">{value}</span>
+              </div>
+            );
+          }
+
+          // For phone-like columns
+          if (columnKey === "Corporate_Phone" || columnKey === "Personal_Phone" || columnKey === "Contact_Number_Personal" || columnKey.toLowerCase().includes('phone')) {
+            return (
+              <div 
+                className="text-black h-6 flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px] gap-1.5 group"
+                title={value}
+              >
+                <Phone className="h-3.5 w-3.5 text-[#8370FC] flex-shrink-0 opacity-70 group-hover:opacity-100" />
+                <span className="truncate">{value}</span>
               </div>
             );
           }
 
           // For URL-like columns
-          if (columnKey === "Website" || columnKey.includes("Linkedin_Url") || columnKey.includes("Linkedin")) {
+          if (columnKey === "Website") {
             return (
               <div 
-                className="text-black max-w-[180px] truncate h-6 flex items-center"
+                className="text-black max-w-[180px] truncate h-6 flex items-center gap-1.5 group"
                 title={value}
               >
-                {value}
+                <Globe className="h-3.5 w-3.5 text-[#8370FC] flex-shrink-0 opacity-70 group-hover:opacity-100" />
+                <span className="truncate">{value}</span>
+              </div>
+            );
+          }
+
+          // For LinkedIn columns
+          if (columnKey.includes("Linkedin_Url") || columnKey.includes("Linkedin")) {
+            return (
+              <div 
+                className="text-black max-w-[180px] truncate h-6 flex items-center gap-1.5 group"
+                title={value}
+              >
+                <LinkedinIcon className="h-3.5 w-3.5 text-[#8370FC] flex-shrink-0 opacity-70 group-hover:opacity-100" />
+                <span className="truncate">{value}</span>
+              </div>
+            );
+          }
+
+          // For Company columns
+          if (columnKey === "Company" || columnKey === "Account_name") {
+            return (
+              <div 
+                className="text-black h-6 flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px] gap-1.5 group"
+                title={value}
+              >
+                <Building2 className="h-3.5 w-3.5 text-[#8370FC] flex-shrink-0 opacity-70 group-hover:opacity-100" />
+                <span className="truncate">{value}</span>
+              </div>
+            );
+          }
+
+          // For address columns
+          if (columnKey === "Company_Address" || columnKey === "Company_Headquarter" || columnKey === "City" || columnKey === "State") {
+            return (
+              <div 
+                className="text-black h-6 flex items-center whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px] gap-1.5 group"
+                title={value}
+              >
+                <MapPin className="h-3.5 w-3.5 text-[#8370FC] flex-shrink-0 opacity-70 group-hover:opacity-100" />
+                <span className="truncate">{value}</span>
               </div>
             );
           }
@@ -792,6 +864,24 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
     return getGeneralFilters(filteredData);
   }, [filteredData]);
 
+  // Add useEffect to setup column pinning after data is loaded
+  useEffect(() => {
+    if (userData?.dataFiles && userData.dataFiles[selectedFileIndex]?.data[0]) {
+      // Check which key columns are available in the data
+      const firstRow = userData.dataFiles[selectedFileIndex].data[0];
+      const pinnedColumns = ['select']; // Always pin select column
+      
+      // Check for key columns to pin
+      if ('Contact_Name' in firstRow) pinnedColumns.push('Contact_Name');
+      if ('First_Name' in firstRow) pinnedColumns.push('First_Name');
+      // Remove Last_Name from being pinned
+      // if ('Last_Name' in firstRow) pinnedColumns.push('Last_Name');
+      
+      // Update column pinning state
+      setColumnPinning({ left: pinnedColumns });
+    }
+  }, [userData, selectedFileIndex]);
+
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -819,6 +909,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
         setPageSize(updater.pageSize);
       }
     },
+    onColumnPinningChange: setColumnPinning,
     state: {
       sorting,
       columnFilters,
@@ -829,9 +920,11 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
         pageIndex,
         pageSize,
       },
+      columnPinning,
     },
     enableRowSelection: true,
     enableMultiRowSelection: true,
+    enableColumnPinning: true,
     manualPagination: false,
   })
 
@@ -1014,7 +1107,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                       placeholder="Search in all columns..."
                       value={globalFilter ?? ""}
                       onChange={(event) => setGlobalFilter(event.target.value)}
-                      className="pl-9 py-2 h-10 bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-blue-500 focus-visible:ring-opacity-30 focus-visible:border-blue-500 rounded-md"
+                      className="pl-9 py-2 h-10 bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-[#8370FC] focus-visible:ring-opacity-30 focus-visible:border-[#8370FC] rounded-md"
                     />
                   </div>
                 </div>
@@ -1067,39 +1160,35 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                               // Check what columns are available in the data
                               const hasColumn = (col: string) => table.getAllLeafColumns().some(column => column.id === col);
                               
-                              // Add columns in the specified order
-                              if (hasColumn("S_No")) essentialColumns.push("S_No");
-                              if (hasColumn("Account_name")) essentialColumns.push("Account_name");
-                              if (hasColumn("Industry_client")) essentialColumns.push("Industry_client");
-                              if (hasColumn("Industry_Nexuses")) essentialColumns.push("Industry_Nexuses");
-                              if (hasColumn("Type_of_Company")) essentialColumns.push("Type_of_Company");
-                              if (hasColumn("priority")) essentialColumns.push("priority");
-                              if (hasColumn("Sales_Manager")) essentialColumns.push("Sales_Manager");
-                              if (hasColumn("No_of_Employees")) essentialColumns.push("No_of_Employees");
-                              if (hasColumn("Revenue")) essentialColumns.push("Revenue");
+                              // Prioritize these essential columns (limited to 5 core columns)
+                              // 1. Person
                               if (hasColumn("Contact_Name")) essentialColumns.push("Contact_Name");
+                              else if (hasColumn("First_Name")) essentialColumns.push("First_Name");
+                              
+                              // 2. Company
+                              if (hasColumn("Company")) essentialColumns.push("Company");
+                              else if (hasColumn("Account_name")) essentialColumns.push("Account_name");
+                              
+                              // 3. Role or Title
                               if (hasColumn("Designation")) essentialColumns.push("Designation");
-                              if (hasColumn("Contact_Number_Personal")) essentialColumns.push("Contact_Number_Personal");
-                              if (hasColumn("Phone_Status")) essentialColumns.push("Phone_Status");
+                              else if (hasColumn("Title")) essentialColumns.push("Title");
+                              
+                              // 4. Email or Contact
                               if (hasColumn("Email_id")) essentialColumns.push("Email_id");
-                              if (hasColumn("Email_Status")) essentialColumns.push("Email_Status");
-                              if (hasColumn("Person_Linkedin_Url")) essentialColumns.push("Person_Linkedin_Url");
-                              if (hasColumn("Website")) essentialColumns.push("Website");
-                              if (hasColumn("Company_Linkedin_Url")) essentialColumns.push("Company_Linkedin_Url");
-                              if (hasColumn("Technologies")) essentialColumns.push("Technologies");
-                              if (hasColumn("City")) essentialColumns.push("City");
-                              if (hasColumn("State")) essentialColumns.push("State");
-                              if (hasColumn("Country_Contact_Person")) essentialColumns.push("Country_Contact_Person");
-                              if (hasColumn("Company_Address")) essentialColumns.push("Company_Address");
-                              if (hasColumn("Company_Headquarter")) essentialColumns.push("Company_Headquarter");
-                              if (hasColumn("Workmates_Remark")) essentialColumns.push("Workmates_Remark");
-                              if (hasColumn("TM_Remarks")) essentialColumns.push("TM_Remarks");
+                              else if (hasColumn("Email")) essentialColumns.push("Email");
+                              else if (hasColumn("Contact_Number_Personal")) essentialColumns.push("Contact_Number_Personal");
+                              
+                              // 5. Industry
+                              if (hasColumn("Industry_client")) essentialColumns.push("Industry_client");
+                              else if (hasColumn("Industry")) essentialColumns.push("Industry");
                               
                               const newVisibility: VisibilityState = {};
                               
                               // First hide all columns except select
                               table.getAllLeafColumns().forEach(column => {
-                                if (column.id !== "select") {
+                                if (column.id === "select") {
+                                  newVisibility[column.id] = true;
+                                } else {
                                   newVisibility[column.id] = false;
                                 }
                               });
@@ -1158,7 +1247,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                               checked={column.getIsVisible()}
                               onCheckedChange={(value) => column.toggleVisibility(!!value)}
                               id={`column-${column.id}`}
-                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              className="h-4 w-4 rounded border-gray-300 text-[#8370FC] focus:ring-[#8370FC]"
                             />
                             <label 
                               htmlFor={`column-${column.id}`}
@@ -1187,7 +1276,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
             </div>
 
             <div className="rounded-lg bg-white border border-gray-200 overflow-hidden">
-              <Table className="select-none w-full bg-white">
+              <Table className="select-none w-full bg-white relative">
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow 
@@ -1198,9 +1287,19 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                         <TableHead 
                           key={header.id} 
                           className={cn(
-                            "text-gray-500 font-medium bg-gray-50 px-4 py-3 first:rounded-tl-lg last:rounded-tr-lg border-b border-gray-200 select-none text-sm",
-                            header.id === "select" && "w-[40px] pr-0"
+                            "text-gray-100 font-medium bg-[#8370FC] px-4 py-3 first:rounded-tl-lg last:rounded-tr-lg border-b border-[#8370FC]/25 select-none text-sm",
+                            header.id === "select" && "w-[40px] pr-0",
+                            header.column.getIsPinned() && "sticky z-30 left-0 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]",
+                            header.column.getIsPinned() && index > 0 && "left-[40px]",
+                            header.column.getIsPinned() && index > 1 && "left-[calc(40px+200px)]",
+                            header.column.getIsPinned() && index > 2 && "left-[calc(40px+400px)]",
+                            !header.column.getIsPinned() && "relative z-10" // Lower z-index for unpinned columns
                           )}
+                          style={{
+                            left: header.column.getIsPinned() && index > 0 ? 
+                              `${40 + (index - 1) * 180}px` : // Position pinned columns with proper spacing
+                              header.column.getIsPinned() ? 0 : undefined
+                          }}
                         >
                           {header.isPlaceholder
                             ? null
@@ -1220,7 +1319,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                         key={row.id}
                         data-state={row.getIsSelected() && "selected"}
                         className={cn(
-                          "hover:bg-blue-50/30 cursor-pointer bg-white select-none transition-colors",
+                          "hover:bg-[#8370FC]/5 cursor-pointer bg-white select-none transition-colors",
                           rowIndex === table.getRowModel().rows.length - 1 ? "last:border-b-0" : "border-b border-gray-100"
                         )}
                         onClick={() => {
@@ -1234,11 +1333,22 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                             className={cn(
                               "text-gray-900 px-4 py-3 bg-white select-none text-sm",
                               cell.column.id === "select" && "pr-0 pl-4 w-[40px]",
-                              row.getIsSelected() && "bg-blue-50/50",
+                              row.getIsSelected() && "bg-[#8370FC]/5",
                               rowIndex === table.getRowModel().rows.length - 1 && cellIndex === 0 && "rounded-bl-lg",
-                              rowIndex ==table.getRowModel().rows.length - 1 && cellIndex === row.getVisibleCells().length - 1 && "rounded-br-lg"
+                              rowIndex === table.getRowModel().rows.length - 1 && cellIndex === row.getVisibleCells().length - 1 && "rounded-br-lg",
+                              cell.column.getIsPinned() && "sticky z-20 left-0 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]",
+                              cell.column.getIsPinned() && cellIndex > 0 && "left-[40px]",
+                              cell.column.getIsPinned() && cellIndex > 1 && "left-[calc(40px+200px)]",
+                              cell.column.getIsPinned() && cellIndex > 2 && "left-[calc(40px+400px)]",
+                              !cell.column.getIsPinned() && "relative z-0" // Lower z-index for unpinned columns
                             )}
-                            style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                            style={{ 
+                              userSelect: 'none', 
+                              WebkitUserSelect: 'none',
+                              left: cell.column.getIsPinned() && cellIndex > 0 ? 
+                                `${40 + (cellIndex - 1) * 180}px` : // Position pinned columns with proper spacing
+                                cell.column.getIsPinned() ? 0 : undefined
+                            }}
                           >
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </TableCell>
@@ -1313,7 +1423,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                             <PaginationLink 
                               onClick={() => table.setPageIndex(i)}
                               isActive={pageIndex === i}
-                              className="h-9 w-9 font-medium"
+                              className={cn("h-9 w-9 font-medium", pageIndex === i && "bg-[#8370FC] text-white hover:bg-[#8370FC]/90")}
                             >
                               {i + 1}
                             </PaginationLink>
@@ -1377,7 +1487,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                           .map((column) => (
                             <TableHead 
                               key={column.id} 
-                              className="bg-gray-50 px-4 py-3 text-sm font-medium text-gray-500 border-b border-gray-200"
+                              className="bg-[#8370FC]/20 hover:bg-[#8370FC]/30 px-4 py-3 text-sm font-medium text-gray-100 border-b border-[#8370FC]/25"
                             >
                               {column.id.replace(/_/g, ' ')}
                             </TableHead>
@@ -1470,7 +1580,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                           setShowReviewSelected(false);
                           setShowExportConfirm(true);
                         }}
-                        className="bg-black text-white hover:bg-black/90"
+                        className="bg-[#8370FC] text-white hover:bg-[#8370FC]/90"
                       >
                         Proceed to Export
                       </Button>
@@ -1535,7 +1645,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                         onClick={() => setExportFormat('xlsx')}
                         className={`flex items-center justify-center gap-2 p-3 border rounded-md ${
                           exportFormat === 'xlsx' 
-                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                            ? 'border-[#8370FC] bg-[#8370FC]/10 text-[#8370FC]' 
                             : 'border-gray-200 hover:border-gray-300 text-gray-700'
                         }`}
                       >
@@ -1547,7 +1657,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                         onClick={() => setExportFormat('csv')}
                         className={`flex items-center justify-center gap-2 p-3 border rounded-md ${
                           exportFormat === 'csv' 
-                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                            ? 'border-[#8370FC] bg-[#8370FC]/10 text-[#8370FC]' 
                             : 'border-gray-200 hover:border-gray-300 text-gray-700'
                         }`}
                       >
@@ -1564,7 +1674,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                   <Button 
                     onClick={handleExport}
                     disabled={exporting || userCredits < table.getSelectedRowModel().rows.length}
-                    className="bg-black text-white hover:bg-black/90"
+                    className="bg-[#8370FC] text-white hover:bg-[#8370FC]/90"
                   >
                     {exporting ? 'Exporting...' : `Export as ${exportFormat.toUpperCase()}`}
                   </Button>
@@ -1583,7 +1693,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                 <DialogFooter>
                   <Button 
                     onClick={() => setShowNoSelectionWarning(false)}
-                    className="bg-black text-white hover:bg-black/90"
+                    className="bg-[#8370FC] text-white hover:bg-[#8370FC]/90"
                   >
                     OK
                   </Button>
@@ -1630,7 +1740,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                 <DialogFooter>
                   <Button 
                     onClick={() => setShowExportSuccess(false)}
-                    className="bg-black text-white hover:bg-black/90"
+                    className="bg-[#8370FC] text-white hover:bg-[#8370FC]/90"
                   >
                     Close
                   </Button>
@@ -1686,7 +1796,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                   placeholder="Search in all columns..."
                   value={globalFilter ?? ""}
                   onChange={(event) => setGlobalFilter(event.target.value)}
-                  className="pl-9 py-2 h-10 bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-blue-500 focus-visible:ring-opacity-30 focus-visible:border-blue-500 rounded-md"
+                  className="pl-9 py-2 h-10 bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-[#8370FC] focus-visible:ring-opacity-30 focus-visible:border-[#8370FC] rounded-md"
                 />
               </div>
             </div>
@@ -1739,39 +1849,35 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                           // Check what columns are available in the data
                           const hasColumn = (col: string) => table.getAllLeafColumns().some(column => column.id === col);
                           
-                          // Add columns in the specified order
-                          if (hasColumn("S_No")) essentialColumns.push("S_No");
-                          if (hasColumn("Account_name")) essentialColumns.push("Account_name");
-                          if (hasColumn("Industry_client")) essentialColumns.push("Industry_client");
-                          if (hasColumn("Industry_Nexuses")) essentialColumns.push("Industry_Nexuses");
-                          if (hasColumn("Type_of_Company")) essentialColumns.push("Type_of_Company");
-                          if (hasColumn("priority")) essentialColumns.push("priority");
-                          if (hasColumn("Sales_Manager")) essentialColumns.push("Sales_Manager");
-                          if (hasColumn("No_of_Employees")) essentialColumns.push("No_of_Employees");
-                          if (hasColumn("Revenue")) essentialColumns.push("Revenue");
+                          // Prioritize these essential columns (limited to 5 core columns)
+                          // 1. Person
                           if (hasColumn("Contact_Name")) essentialColumns.push("Contact_Name");
+                          else if (hasColumn("First_Name")) essentialColumns.push("First_Name");
+                          
+                          // 2. Company
+                          if (hasColumn("Company")) essentialColumns.push("Company");
+                          else if (hasColumn("Account_name")) essentialColumns.push("Account_name");
+                          
+                          // 3. Role or Title
                           if (hasColumn("Designation")) essentialColumns.push("Designation");
-                          if (hasColumn("Contact_Number_Personal")) essentialColumns.push("Contact_Number_Personal");
-                          if (hasColumn("Phone_Status")) essentialColumns.push("Phone_Status");
+                          else if (hasColumn("Title")) essentialColumns.push("Title");
+                          
+                          // 4. Email or Contact
                           if (hasColumn("Email_id")) essentialColumns.push("Email_id");
-                          if (hasColumn("Email_Status")) essentialColumns.push("Email_Status");
-                          if (hasColumn("Person_Linkedin_Url")) essentialColumns.push("Person_Linkedin_Url");
-                          if (hasColumn("Website")) essentialColumns.push("Website");
-                          if (hasColumn("Company_Linkedin_Url")) essentialColumns.push("Company_Linkedin_Url");
-                          if (hasColumn("Technologies")) essentialColumns.push("Technologies");
-                          if (hasColumn("City")) essentialColumns.push("City");
-                          if (hasColumn("State")) essentialColumns.push("State");
-                          if (hasColumn("Country_Contact_Person")) essentialColumns.push("Country_Contact_Person");
-                          if (hasColumn("Company_Address")) essentialColumns.push("Company_Address");
-                          if (hasColumn("Company_Headquarter")) essentialColumns.push("Company_Headquarter");
-                          if (hasColumn("Workmates_Remark")) essentialColumns.push("Workmates_Remark");
-                          if (hasColumn("TM_Remarks")) essentialColumns.push("TM_Remarks");
+                          else if (hasColumn("Email")) essentialColumns.push("Email");
+                          else if (hasColumn("Contact_Number_Personal")) essentialColumns.push("Contact_Number_Personal");
+                          
+                          // 5. Industry
+                          if (hasColumn("Industry_client")) essentialColumns.push("Industry_client");
+                          else if (hasColumn("Industry")) essentialColumns.push("Industry");
                           
                           const newVisibility: VisibilityState = {};
                           
                           // First hide all columns except select
                           table.getAllLeafColumns().forEach(column => {
-                            if (column.id !== "select") {
+                            if (column.id === "select") {
+                              newVisibility[column.id] = true;
+                            } else {
                               newVisibility[column.id] = false;
                             }
                           });
@@ -1830,7 +1936,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                           checked={column.getIsVisible()}
                           onCheckedChange={(value) => column.toggleVisibility(!!value)}
                           id={`column-${column.id}`}
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          className="h-4 w-4 rounded border-gray-300 text-[#8370FC] focus:ring-[#8370FC]"
                         />
                         <label 
                           htmlFor={`column-${column.id}`}
@@ -1859,7 +1965,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
         </div>
 
         <div className="rounded-lg bg-white border border-gray-200 overflow-hidden">
-          <Table className="select-none w-full bg-white">
+          <Table className="select-none w-full bg-white relative">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow 
@@ -1870,9 +1976,19 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                     <TableHead 
                       key={header.id} 
                       className={cn(
-                        "text-gray-500 font-medium bg-gray-50 px-4 py-3 first:rounded-tl-lg last:rounded-tr-lg border-b border-gray-200 select-none text-sm",
-                        header.id === "select" && "w-[40px] pr-0"
+                        "text-gray-100 font-medium bg-[#8370FC] px-4 py-3 first:rounded-tl-lg last:rounded-tr-lg border-b border-[#8370FC]/25 select-none text-sm",
+                        header.id === "select" && "w-[40px] pr-0",
+                        header.column.getIsPinned() && "sticky z-30 left-0 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]",
+                        header.column.getIsPinned() && index > 0 && "left-[40px]",
+                        header.column.getIsPinned() && index > 1 && "left-[calc(40px+200px)]",
+                        header.column.getIsPinned() && index > 2 && "left-[calc(40px+400px)]",
+                        !header.column.getIsPinned() && "relative z-10" // Lower z-index for unpinned columns
                       )}
+                      style={{
+                        left: header.column.getIsPinned() && index > 0 ? 
+                          `${40 + (index - 1) * 180}px` : // Position pinned columns with proper spacing
+                          header.column.getIsPinned() ? 0 : undefined
+                      }}
                     >
                       {header.isPlaceholder
                         ? null
@@ -1892,7 +2008,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
                     className={cn(
-                      "hover:bg-blue-50/30 cursor-pointer bg-white select-none transition-colors",
+                      "hover:bg-[#8370FC]/5 cursor-pointer bg-white select-none transition-colors",
                       rowIndex === table.getRowModel().rows.length - 1 ? "last:border-b-0" : "border-b border-gray-100"
                     )}
                     onClick={() => {
@@ -1906,11 +2022,22 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                         className={cn(
                           "text-gray-900 px-4 py-3 bg-white select-none text-sm",
                           cell.column.id === "select" && "pr-0 pl-4 w-[40px]",
-                          row.getIsSelected() && "bg-blue-50/50",
+                          row.getIsSelected() && "bg-[#8370FC]/5",
                           rowIndex === table.getRowModel().rows.length - 1 && cellIndex === 0 && "rounded-bl-lg",
-                          rowIndex === table.getRowModel().rows.length - 1 && cellIndex === row.getVisibleCells().length - 1 && "rounded-br-lg"
+                          rowIndex === table.getRowModel().rows.length - 1 && cellIndex === row.getVisibleCells().length - 1 && "rounded-br-lg",
+                          cell.column.getIsPinned() && "sticky z-20 left-0 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]",
+                          cell.column.getIsPinned() && cellIndex > 0 && "left-[40px]",
+                          cell.column.getIsPinned() && cellIndex > 1 && "left-[calc(40px+200px)]",
+                          cell.column.getIsPinned() && cellIndex > 2 && "left-[calc(40px+400px)]",
+                          !cell.column.getIsPinned() && "relative z-0" // Lower z-index for unpinned columns
                         )}
-                        style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                        style={{ 
+                          userSelect: 'none', 
+                          WebkitUserSelect: 'none',
+                          left: cell.column.getIsPinned() && cellIndex > 0 ? 
+                            `${40 + (cellIndex - 1) * 180}px` : // Position pinned columns with proper spacing
+                            cell.column.getIsPinned() ? 0 : undefined
+                        }}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
@@ -1985,7 +2112,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                         <PaginationLink 
                           onClick={() => table.setPageIndex(i)}
                           isActive={pageIndex === i}
-                          className="h-9 w-9 font-medium"
+                          className={cn("h-9 w-9 font-medium", pageIndex === i && "bg-[#8370FC] text-white hover:bg-[#8370FC]/90")}
                         >
                           {i + 1}
                         </PaginationLink>
@@ -2049,7 +2176,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                       .map((column) => (
                         <TableHead 
                           key={column.id} 
-                          className="bg-gray-50 px-4 py-3 text-sm font-medium text-gray-500 border-b border-gray-200"
+                          className="bg-[#8370FC]/20 hover:bg-[#8370FC]/30 px-4 py-3 text-sm font-medium text-gray-100 border-b border-[#8370FC]/25"
                         >
                           {column.id.replace(/_/g, ' ')}
                         </TableHead>
@@ -2142,7 +2269,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                       setShowReviewSelected(false);
                       setShowExportConfirm(true);
                     }}
-                    className="bg-black text-white hover:bg-black/90"
+                    className="bg-[#8370FC] text-white hover:bg-[#8370FC]/90"
                   >
                     Proceed to Export
                   </Button>
@@ -2207,7 +2334,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                     onClick={() => setExportFormat('xlsx')}
                     className={`flex items-center justify-center gap-2 p-3 border rounded-md ${
                       exportFormat === 'xlsx' 
-                        ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                        ? 'border-[#8370FC] bg-[#8370FC]/10 text-[#8370FC]' 
                         : 'border-gray-200 hover:border-gray-300 text-gray-700'
                     }`}
                   >
@@ -2219,7 +2346,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
                     onClick={() => setExportFormat('csv')}
                     className={`flex items-center justify-center gap-2 p-3 border rounded-md ${
                       exportFormat === 'csv' 
-                        ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                        ? 'border-[#8370FC] bg-[#8370FC]/10 text-[#8370FC]' 
                         : 'border-gray-200 hover:border-gray-300 text-gray-700'
                     }`}
                   >
@@ -2236,7 +2363,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
               <Button 
                 onClick={handleExport}
                 disabled={exporting || userCredits < table.getSelectedRowModel().rows.length}
-                className="bg-black text-white hover:bg-black/90"
+                className="bg-[#8370FC] text-white hover:bg-[#8370FC]/90"
               >
                 {exporting ? 'Exporting...' : `Export as ${exportFormat.toUpperCase()}`}
               </Button>
@@ -2255,7 +2382,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
             <DialogFooter>
               <Button 
                 onClick={() => setShowNoSelectionWarning(false)}
-                className="bg-black text-white hover:bg-black/90"
+                className="bg-[#8370FC] text-white hover:bg-[#8370FC]/90"
               >
                 OK
               </Button>
@@ -2302,7 +2429,7 @@ export function DataTable({ selectedFileIndex, activeFilters, setIsFilterOpen, a
             <DialogFooter>
               <Button 
                 onClick={() => setShowExportSuccess(false)}
-                className="bg-black text-white hover:bg-black/90"
+                className="bg-[#8370FC] text-white hover:bg-[#8370FC]/90"
               >
                 Close
               </Button>

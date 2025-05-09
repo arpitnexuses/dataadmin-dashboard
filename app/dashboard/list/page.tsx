@@ -74,11 +74,11 @@ export default function ListPage() {
     <div className="space-y-4">
       {!selectedFile ? (
         <>
-          <h1 className="text-3xl font-bold">Files</h1>
+          <h1 className="text-3xl font-bold text-gray-800">Files</h1>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {/* All Files Card */}
             <Card 
-              className="group hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-blue-400 hover:border-blue-500 bg-white"
+              className="group hover:shadow-xl transition-all duration-300 cursor-pointer border border-[#8370FC]/20 hover:border-[#8370FC] bg-white"
               onClick={() => {
                 const allFilesData: File = {
                   id: 'all-files',
@@ -91,16 +91,16 @@ export default function ListPage() {
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="space-y-1">
-                  <CardTitle className="text-lg font-semibold text-blue-600 group-hover:text-blue-700">
+                  <CardTitle className="text-lg font-semibold text-[#8370FC] group-hover:text-[#8370FC]/90">
                     All Files
                   </CardTitle>
                   <p className="text-sm text-gray-500 line-clamp-2">
                     Combined data from all files
                   </p>
                 </div>
-                <div className="flex items-center gap-2 bg-blue-50 p-2 rounded-lg">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-600">
+                <div className="flex items-center gap-2 bg-[#8370FC]/10 p-2 rounded-lg">
+                  <FileText className="h-5 w-5 text-[#8370FC]" />
+                  <span className="text-sm font-medium text-[#8370FC]">
                     {files.reduce((acc, file) => acc + file.data.length, 0)} records
                   </span>
                 </div>
@@ -108,7 +108,7 @@ export default function ListPage() {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                    <div className="h-2 w-2 rounded-full bg-[#8370FC] animate-pulse" />
                     <span className="text-xs text-gray-500">Click to view all data</span>
                   </div>
                   <div className="text-xs text-gray-400">
@@ -121,21 +121,21 @@ export default function ListPage() {
             {files.map((file) => (
               <Card 
                 key={file.id} 
-                className="group hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-400 hover:border-black/30 bg-white"
+                className="group hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 hover:border-[#8370FC] bg-white"
                 onClick={() => handleFileClick(file)}
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <div className="space-y-1">
-                    <CardTitle className="text-lg font-semibold text-black group-hover:text-black/80">
+                    <CardTitle className="text-lg font-semibold text-gray-800 group-hover:text-[#8370FC]">
                       {file.name}
                     </CardTitle>
                     <p className="text-sm text-gray-500 line-clamp-2">
                       {file.description}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 bg-black/5 p-2 rounded-lg">
-                    <FileText className="h-5 w-5 text-black" />
-                    <span className="text-sm font-medium text-black">
+                  <div className="flex items-center gap-2 bg-gray-50 group-hover:bg-[#8370FC]/10 p-2 rounded-lg">
+                    <FileText className="h-5 w-5 text-gray-600 group-hover:text-[#8370FC]" />
+                    <span className="text-sm font-medium text-gray-600 group-hover:text-[#8370FC]">
                       {file.data.length} records
                     </span>
                   </div>
@@ -143,7 +143,7 @@ export default function ListPage() {
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-black animate-pulse" />
+                      <div className="h-2 w-2 rounded-full bg-gray-400 group-hover:bg-[#8370FC] animate-pulse" />
                       <span className="text-xs text-gray-500">Click to view details</span>
                     </div>
                     <div className="text-xs text-gray-400">
@@ -160,7 +160,7 @@ export default function ListPage() {
           <div className="flex flex-col space-y-2">
             <button 
               onClick={() => setSelectedFile(null)}
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-black transition-colors w-fit group"
+              className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#8370FC] transition-colors w-fit group"
             >
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
@@ -179,7 +179,7 @@ export default function ListPage() {
               </svg>
               Back to Files
             </button>
-            <h1 className="text-3xl font-bold">{selectedFile.name}</h1>
+            <h1 className="text-3xl font-bold text-gray-800">{selectedFile.name}</h1>
           </div>
           
           <DataTable 

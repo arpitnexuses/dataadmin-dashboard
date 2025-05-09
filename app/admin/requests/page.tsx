@@ -138,7 +138,7 @@ export default function RequestsPage() {
               <TableBody>
                 {requests.map((request) => (
                   <TableRow key={request._id} className="border-zinc-800 hover:bg-zinc-800/50">
-                    <TableCell className="text-white">{request.userId.email}</TableCell>
+                    <TableCell className="text-white">{request.userId?.email || 'Unknown User'}</TableCell>
                     <TableCell className="text-white">{request.title}</TableCell>
                     <TableCell>
                       <Badge
@@ -184,7 +184,7 @@ export default function RequestsPage() {
                               <div className="space-y-4 text-white">
                                 <div>
                                   <h3 className="font-semibold text-white/70">Submitted By</h3>
-                                  <p>{request.userId.email}</p>
+                                  <p>{request.userId?.email || 'Unknown User'}</p>
                                 </div>
                                 <div>
                                   <h3 className="font-semibold text-white/70">Title</h3>

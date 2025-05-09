@@ -35,8 +35,8 @@ interface UserData {
   credits: number
 }
 
-const COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#FFD93D', '#6C5B7B', '#355C7D']
-const COUNTRY_COLORS = ['#845EC2', '#D65DB1', '#FF6F91', '#FF9671', '#FFC75F', '#F9F871', '#008F7A', '#2C73D2']
+const COLORS = ['#BFAAFF', '#8370FC', '#A3A1FB', '#C3B1E1', '#B5A7F7', '#BFAAFF', '#8370FC', '#A3A1FB']
+const COUNTRY_COLORS = ['#BFAAFF', '#8370FC', '#A3A1FB', '#C3B1E1', '#B5A7F7', '#BFAAFF', '#8370FC', '#A3A1FB']
 const TECH_COLORS = ['#00B8A9', '#F8F3D4', '#F6416C', '#FFDE7D', '#7868E6', '#B8F2E6']
 
 export default function DashboardPage() {
@@ -332,25 +332,25 @@ export default function DashboardPage() {
             <p className="text-xs text-gray-500">Total records across all files</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-600 to-blue-800 text-white relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-200">
+        <Card className="bg-[#8370FC] text-white relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-200">
           {/* Shining Animation */}
           <div className="absolute inset-0 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shine"></div>
           </div>
           
           {/* Ribbon Element */}
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/20 transform rotate-45 translate-x-12 -translate-y-12"></div>
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-400/10 transform rotate-45 translate-x-8 -translate-y-8"></div>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-[#8370FC]/20 transform rotate-45 translate-x-12 -translate-y-12"></div>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-[#8370FC]/10 transform rotate-45 translate-x-8 -translate-y-8"></div>
           
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-sm font-medium text-blue-100">Available Credits</CardTitle>
-            <div className="bg-blue-500/20 p-3 rounded-full">
-              <CreditCard className="h-4 w-4 text-blue-200" />
+            <CardTitle className="text-sm font-medium text-white">Available Credits</CardTitle>
+            <div className="bg-white/20 p-3 rounded-full">
+              <CreditCard className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent className="relative z-10">
             <div className="text-4xl font-bold">{userData?.credits || 0}</div>
-            <p className="text-xs text-blue-100">Credits available for use</p>
+            <p className="text-xs text-white/80">Credits available for use</p>
           </CardContent>
         </Card>
         <Card className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-200">
@@ -412,7 +412,15 @@ export default function DashboardPage() {
                     <XAxis 
                       dataKey="name"
                       interval={0}
-                      tick={{ fontSize: 12 }}
+                      height={60}
+                      tick={({ x, y, payload }) => {
+                        const label = payload.value.length > 10 ? payload.value.slice(0, 10) + '...' : payload.value;
+                        return (
+                          <g transform={`translate(${x},${y + 10}) rotate(-45)`}>
+                            <text textAnchor="end" fontSize={12} fill="#888">{label}</text>
+                          </g>
+                        );
+                      }}
                     />
                     <YAxis 
                       tick={{ fontSize: 12 }}
@@ -423,14 +431,14 @@ export default function DashboardPage() {
                     />
                     <Bar
                       dataKey="count"
-                      fill="#4ECDC4"
-                      radius={[4, 4, 0, 0]}
+                      fill="#8370FC"
+                      radius={[999, 999, 0, 0]}
                       cursor="pointer"
                     >
                       {getTop6Titles().map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
-                          fill={COLORS[index % COLORS.length]}
+                          fill="#8370FC"
                         />
                       ))}
                     </Bar>
@@ -467,12 +475,13 @@ export default function DashboardPage() {
                     />
                     <Bar
                       dataKey="value"
+                      fill="#BFAAFF"
                       radius={[4, 4, 0, 0]}
                     >
                       {userData?.fileAnalytics.revenueSize.map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
-                          fill={COUNTRY_COLORS[index % COUNTRY_COLORS.length]}
+                          fill="#BFAAFF"
                         />
                       ))}
                     </Bar>
@@ -498,9 +507,10 @@ export default function DashboardPage() {
                       data={getTop8Industries()}
                       cx="50%"
                       cy="50%"
-                      innerRadius={80}
+                      innerRadius={90}
                       outerRadius={120}
                       paddingAngle={2}
+                      cornerRadius={8}
                       dataKey="value"
                       label={({
                         cx,
@@ -520,10 +530,17 @@ export default function DashboardPage() {
                           <text
                             x={x}
                             y={y}
-                            fill="#888"
                             textAnchor={x > cx ? 'start' : 'end'}
                             dominantBaseline="central"
-                            className="text-xs"
+                            style={{
+                              fill: '#888888',
+                              color: '#888888',
+                              fontSize: 14,
+                              fontWeight: 500,
+                              paintOrder: 'stroke',
+                              stroke: 'white',
+                              strokeWidth: 0.5,
+                            }}
                           >
                             <tspan x={x} dy="-0.5em">{getTop8Industries()[index]?.name}</tspan>
                             <tspan x={x} dy="1.2em">{`(${value})`}</tspan>
@@ -566,9 +583,10 @@ export default function DashboardPage() {
                       data={getTop8Countries()}
                       cx="50%"
                       cy="50%"
-                      innerRadius={80}
+                      innerRadius={90}
                       outerRadius={120}
                       paddingAngle={2}
+                      cornerRadius={8}
                       dataKey="value"
                       label={({
                         cx,
@@ -588,10 +606,17 @@ export default function DashboardPage() {
                           <text
                             x={x}
                             y={y}
-                            fill="#888"
                             textAnchor={x > cx ? 'start' : 'end'}
                             dominantBaseline="central"
-                            className="text-xs"
+                            style={{
+                              fill: '#888888',
+                              color: '#888888',
+                              fontSize: 14,
+                              fontWeight: 500,
+                              paintOrder: 'stroke',
+                              stroke: 'white',
+                              strokeWidth: 0.5,
+                            }}
                           >
                             <tspan x={x} dy="-0.5em">{getTop8Countries()[index]?.name}</tspan>
                             <tspan x={x} dy="1.2em">{`(${value})`}</tspan>
@@ -733,14 +758,14 @@ export default function DashboardPage() {
                     />
                     <Bar
                       dataKey="value"
-                      fill={TECH_COLORS[0]}
-                      radius={[4, 4, 0, 0]}
+                      fill="#8370FC"
+                      radius={[999, 999, 0, 0]}
                       cursor="pointer"
                     >
                       {getTop6Technologies().map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
-                          fill={TECH_COLORS[index % TECH_COLORS.length]}
+                          fill="#8370FC"
                         />
                       ))}
                     </Bar>
@@ -780,12 +805,13 @@ export default function DashboardPage() {
                     />
                     <Bar
                       dataKey="value"
+                      fill="#BFAAFF"
                       radius={[4, 4, 0, 0]}
                     >
                       {userData?.fileAnalytics.employeeSize.map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
-                          fill={TECH_COLORS[index % TECH_COLORS.length]}
+                          fill="#BFAAFF"
                         />
                       ))}
                     </Bar>

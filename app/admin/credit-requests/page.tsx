@@ -101,7 +101,7 @@ export default function CreditRequestsPage() {
               <TableBody>
                 {requests.map((request) => (
                   <TableRow key={request._id} className="border-zinc-800 hover:bg-zinc-800/50">
-                    <TableCell className="text-white">{request.userId.email}</TableCell>
+                    <TableCell className="text-white">{request.userId?.email || 'Unknown User'}</TableCell>
                     <TableCell className="text-white">{request.amount}</TableCell>
                     <TableCell>
                       <Badge

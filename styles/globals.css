@@ -92,3 +92,12 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Force Recharts pie chart labels to be grey */
+.recharts-pie-label-text,
+.recharts-layer text,
+.recharts-pie-label-text[style],
+.recharts-layer text[style] {
+  fill: #888888 !important;
+  color: #888888 !important;
+}

@@ -92,42 +92,23 @@ export function AuthForm({
   };
 
   return (
-    <div className="w-full max-w-md">
-      <div className="relative group">
-        {/* Animated background blur effect */}
-        <div
-          className={cn(
-            "absolute -inset-0.5 bg-gradient-to-r rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-1000 group-hover:duration-200 animate-tilt",
-            colors[variant].gradient
-          )}
-        ></div>
-
-        {/* Main card with glass effect */}
-        <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl transition-all duration-300 ease-in-out transform hover:scale-[1.01] hover:shadow-2xl">
-          <div className="flex flex-col items-center space-y-4 mb-8">
-            {/* Logo without animation */}
-            <div className="relative w-48 h-12">
-              <Image
-                src="https://cdn-nexlink.s3.us-east-2.amazonaws.com/Nexuses_logo_blue_(2)_3_721ee160-2cac-429c-af66-f55b7233f6ed.png"
-                alt="Nexuses Logo"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-            <h2
-              className="text-2xl font-semibold"
-              style={{ color: colors[variant].primary }}
-            >
-              {isAdmin ? "Admin" : "Welcome"}
-            </h2>
-            <p className="text-gray-600 text-sm animate-fade-in-delay">
-              {isAdmin
-                ? "Enter your admin credentials"
-                : "Enter your credentials"}
-            </p>
+    <div className="flex w-full min-h-screen">
+      {/* Left side - Login form */}
+      <div className="w-full md:w-1/2 flex items-center justify-center p-8 bg-white">
+        <div className="w-full max-w-md">
+          <div className="mb-8">
+            <Image
+              src="https://cdn-nexlink.s3.us-east-2.amazonaws.com/Nexuses_logo_blue_(2)_3_721ee160-2cac-429c-af66-f55b7233f6ed.png"
+              alt="Nexuses Logo"
+              width={250}
+              height={60}
+              className="object-contain"
+              priority
+            />
           </div>
-
+          
+          <h1 className="text-3xl font-bold mb-1">Login</h1>
+          
           {error && (
             <Alert variant="destructive" className="mb-6 animate-shake">
               <AlertCircle className="h-4 w-4" />
@@ -136,12 +117,12 @@ export function AuthForm({
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2 group/input">
+            <div className="space-y-2">
               <label
-                className="block text-sm text-gray-600 transition-colors"
-                style={{ color: colors[variant].primary }}
+                className="block text-sm text-gray-600"
+                htmlFor="email"
               >
-                Email address
+                Email Address
               </label>
               <Input
                 id="email"
@@ -150,17 +131,14 @@ export function AuthForm({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className={cn(
-                  "w-full border border-gray-200 rounded-lg px-4 py-2.5 transition-all duration-300 hover:border-gray-300",
-                  `focus:border-[${colors[variant].primary}]`,
-                  colors[variant].ring
-                )}
+                className="w-full border border-gray-200 rounded-lg px-4 py-2.5"
               />
             </div>
-            <div className="space-y-2 group/input">
+            
+            <div className="space-y-2">
               <label
-                className="block text-sm text-gray-600 transition-colors"
-                style={{ color: colors[variant].primary }}
+                className="block text-sm text-gray-600"
+                htmlFor="password"
               >
                 Password
               </label>
@@ -171,20 +149,14 @@ export function AuthForm({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className={cn(
-                  "w-full border border-gray-200 rounded-lg px-4 py-2.5 transition-all duration-300 hover:border-gray-300",
-                  `focus:border-[${colors[variant].primary}]`,
-                  colors[variant].ring
-                )}
+                className="w-full border border-gray-200 rounded-lg px-4 py-2.5"
               />
             </div>
+            
             <Button
               type="submit"
-              className={cn(
-                "w-full text-white py-2.5 rounded-lg transition-all duration-300 transform hover:translate-y-[-2px] hover:shadow-lg disabled:hover:transform-none",
-                colors[variant].hover
-              )}
-              style={{ backgroundColor: colors[variant].primary }}
+              className="w-full text-white py-2.5 rounded-lg transition-all duration-300"
+              style={{ backgroundColor: "#1D9EE3" }}
               disabled={loading}
             >
               {loading ? (
@@ -212,28 +184,35 @@ export function AuthForm({
                   Processing...
                 </span>
               ) : (
-                "Sign in"
+                "LOGIN"
               )}
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          {/* <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{" "}
               <button
                 type="button"
                 onClick={toggleFormType}
-                className={cn(
-                  "font-medium transition-all duration-300 hover:underline decoration-2 underline-offset-4",
-                  colors[variant].hover
-                )}
-                style={{ color: colors[variant].primary }}
+                className="font-medium text-[#1D9EE3] hover:underline"
               >
                 Contact admin
               </button>
             </p>
-          </div>
+          </div> */}
         </div>
+      </div>
+
+      {/* Right side - Marketing/branding section */}
+      <div className="hidden md:block md:w-1/2 bg-[#1D4ED8] relative overflow-hidden">
+        <Image
+          src="/Login_img.png"
+          alt="Marketing visual"
+          fill
+          className="object-cover"
+          priority
+        />
       </div>
     </div>
   );

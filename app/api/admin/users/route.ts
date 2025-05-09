@@ -76,10 +76,10 @@ export async function GET(request: NextRequest) {
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
         dataFiles: (user.dataFiles || []).map(file => ({
-          fileId: file.fileId._id.toString(),
+          fileId: file.fileId?._id?.toString() || null,
           title: file.title,
-          filename: file.fileId.originalName,
-        })),
+          filename: file.fileId?.originalName || 'Unknown',
+        })).filter(file => file.fileId !== null),
       })),
     })
   } catch (error) {

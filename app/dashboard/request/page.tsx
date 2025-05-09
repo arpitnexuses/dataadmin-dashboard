@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,8 +9,11 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
-import { X, ArrowLeft, Edit2, Clock, CheckCircle2, XCircle, Trash2, Plus } from "lucide-react"
+import { X, ArrowLeft, Edit2, Clock, CheckCircle2, XCircle, Trash2, Plus, Upload, FilePlus } from "lucide-react"
 import Image from "next/image"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Loader2 } from "lucide-react"
 
 const SENIORITY_LEVELS = ["Executive", "Management", "Operational"]
 const OWNERSHIP_TYPES = ["Public", "Private", "Government"]
@@ -54,6 +57,70 @@ interface DataRequest {
   updatedAt: string
 }
 
+function UserSheetUpload({ onSuccess }: { onSuccess?: () => void }) {
+  const [file, setFile] = useState<File | null>(null)
+  const [sheetName, setSheetName] = useState("")
+  const [description, setDescription] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setSuccess("")
+    setLoading(true)
+    if (!file || !sheetName) {
+      setError("Please select a file and enter a sheet name.")
+      setLoading(false)
+      return
+    }
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("sheetName", sheetName)
+      formData.append("description", description)
+      const response = await fetch("/api/upload-sheet", {
+        method: "POST",
+        body: formData,
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || "Failed to upload file")
+      setSuccess("File uploaded successfully")
+      setFile(null)
+      setSheetName("")
+      setDescription("")
+      onSuccess?.()
+    } catch (err: any) {
+      setError(err.message || "Failed to upload file")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+      {success && <Alert><AlertDescription>{success}</AlertDescription></Alert>}
+      <div className="space-y-2">
+        <Label htmlFor="sheetName">Sheet Name</Label>
+        <Input id="sheetName" value={sheetName} onChange={e => setSheetName(e.target.value)} placeholder="Enter a name for your sheet" required />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="file">Upload Data (CSV/Excel)</Label>
+        <Input id="file" type="file" accept=".csv,.xlsx,.xls" onChange={e => setFile(e.target.files?.[0] || null)} ref={inputRef} required />
+        <p className="text-sm text-muted-foreground">Supports .xlsx, .xls, .csv</p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="description">Description (optional)</Label>
+        <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe your data (optional)" />
+      </div>
+      <Button type="submit" className="w-full" disabled={loading}>{loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading...</> : "Upload Sheet"}</Button>
+    </form>
+  )
+}
+
 export default function RequestPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingRequest, setEditingRequest] = useState<DataRequest | null>(null)
@@ -83,6 +150,7 @@ export default function RequestPage() {
   const [currentCompetitor, setCurrentCompetitor] = useState("")
   const [currentFinancialIndicator, setCurrentFinancialIndicator] = useState("")
   const [currentTechnology, setCurrentTechnology] = useState("")
+  const [showUploadModal, setShowUploadModal] = useState(false)
 
   useEffect(() => {
     fetchUserRequests()
@@ -917,140 +985,177 @@ export default function RequestPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="flex items-center justify-between p-6 border-b border-zinc-100">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-zinc-900">My Data Requests</h1>
-        </div>
-        <Button 
-          onClick={() => setShowForm(true)}
-          className="bg-black text-white hover:bg-zinc-800 flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          New Request
-        </Button>
-      </div>
-
-      <div className="p-6">
-        {userRequests.length === 0 ? (
-          <Card className="bg-white border border-zinc-200 shadow-sm">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <div className="text-zinc-500 text-center space-y-2">
-                <p>You haven't submitted any data requests yet.</p>
-                <Button 
-                  onClick={() => setShowForm(true)}
-                  variant="outline"
-                  className="mt-4 border-zinc-200 text-zinc-900 hover:bg-zinc-50"
-                >
-                  Create Your First Request
-                </Button>
+      <h1 className="text-2xl font-bold text-zinc-900 px-6 pt-6 mb-4">Data Requests</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+        {/* Create ICP Request Card */}
+        <Card className="border border-zinc-200 shadow-sm cursor-pointer hover:shadow-md transition bg-zinc-50" onClick={() => setShowForm(true)}>
+          <CardHeader className="flex flex-row items-center gap-3">
+            <div className="bg-purple-50 p-2 rounded-full"><FilePlus className="h-6 w-6 text-purple-600" /></div>
+            <div>
+              <CardTitle className="text-lg">Create ICP Request</CardTitle>
+              <CardDescription>Create a new Ideal Customer Profile request</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <div className="w-full text-center text-zinc-500 font-medium">Click to create ICP request<br /><span className="text-xs">Define your target customer profile</span></div>
+          </CardContent>
+        </Card>
+        {/* Upload a Sheet Card */}
+        <div className="relative">
+          <Card className="border border-zinc-200 shadow-sm bg-blue-50 select-none pointer-events-none">
+            <CardHeader className="flex flex-row items-center gap-3">
+              <div className="bg-blue-50 p-2 rounded-full"><Upload className="h-6 w-6 text-blue-600" /></div>
+              <div>
+                <CardTitle className="text-lg">Upload a Target Sheet</CardTitle>
+                <CardDescription>Upload your data sheet for processing and analysis</CardDescription>
               </div>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center py-8">
+              <div className="w-full text-center text-zinc-500 font-medium">Click to upload your sheet<br /><span className="text-xs">Supports .xlsx, .xls, .csv</span></div>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {userRequests.map((request) => (
-              <Card key={request._id} className={`bg-white border border-gray-400 shadow-sm hover:shadow-md transition-all duration-200 ${
-                request.status === "approved" 
-                  ? "bg-green-50" 
-                  : request.status === "pending" 
-                  ? "bg-yellow-50" 
-                  : "bg-white"
-              }`}>
-                <CardHeader className="border-b border-gray-200 p-4">
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="space-y-1 flex-1 min-w-0">
-                      <CardTitle className="text-zinc-900 text-lg font-semibold truncate">{request.title}</CardTitle>
-                      <CardDescription className="text-zinc-500 text-sm line-clamp-2">
-                        {request.description}
-                      </CardDescription>
-                    </div>
-                    <Badge
-                      variant={
-                        request.status === "approved"
-                          ? "default"
-                          : request.status === "rejected"
-                          ? "destructive"
-                          : "secondary"
-                      }
-                      className={`capitalize font-medium px-2 py-1 ${
-                        request.status === "approved"
-                          ? "bg-green-50 text-green-700 border-green-200"
-                          : request.status === "rejected"
-                          ? "bg-red-50 text-red-700 border-red-200"
-                          : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                      }`}
-                    >
-                      {request.status === "approved" && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                      {request.status === "rejected" && <XCircle className="h-3 w-3 mr-1" />}
-                      {request.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
-                      {request.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-zinc-700 text-sm font-medium">Target Industries</Label>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {request.industry.target.map((industry, index) => (
-                          <Badge 
-                            key={index} 
-                            variant="secondary" 
-                            className="bg-zinc-50 text-zinc-700 hover:bg-zinc-100 border border-zinc-200 text-xs px-2 py-0.5"
-                          >
-                            {industry}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-zinc-700 text-sm font-medium">Target Regions</Label>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {request.geography.target.map((region, index) => (
-                          <Badge 
-                            key={index} 
-                            variant="secondary" 
-                            className="bg-zinc-50 text-zinc-700 hover:bg-zinc-100 border border-zinc-200 text-xs px-2 py-0.5"
-                          >
-                            {region}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="pt-3 flex justify-end gap-2 border-t border-gray-200">
-                      {request.status !== "approved" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => startEdit(request)}
-                          disabled={request.hasBeenEdited}
-                          className={`text-black border-zinc-200 hover:bg-zinc-50 h-8 ${
-                            request.hasBeenEdited ? "opacity-50 cursor-not-allowed" : ""
-                          }`}
-                        >
-                          <Edit2 className="h-3.5 w-3.5 mr-1.5" />
-                          {request.hasBeenEdited ? "Already Edited" : "Edit"}
-                        </Button>
-                      )}
-                      {request.status !== "approved" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(request._id)}
-                          className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 h-8"
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                          Delete
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="absolute inset-0 flex items-center justify-center rounded-lg z-10" style={{ backgroundColor: '#E6E1FF', opacity: 0.7 }}>
+            <span className="text-lg font-semibold" style={{ color: '#8370FC' }}>Coming Soon</span>
           </div>
-        )}
+        </div>
       </div>
+      {/* Upload Sheet Modal */}
+      <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+        <DialogContent className="max-w-md w-full">
+          <DialogHeader>
+            <DialogTitle>Upload a Target Sheet</DialogTitle>
+          </DialogHeader>
+          <UserSheetUpload onSuccess={() => setShowUploadModal(false)} />
+        </DialogContent>
+      </Dialog>
+      {/* ICP Form Section (existing logic) */}
+      {showForm ? (
+        // ... existing ICP form code ...
+        // (leave as is, already present in your file)
+        <>{/* existing form UI */}</>
+      ) : (
+        <div className="p-6">
+          {userRequests.length === 0 ? (
+            <Card className="bg-white border border-zinc-200 shadow-sm">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <div className="text-zinc-500 text-center space-y-2">
+                  <p>You haven't submitted any data requests yet.</p>
+                  <Button 
+                    onClick={() => setShowForm(true)}
+                    variant="outline"
+                    className="mt-4 border-zinc-200 text-zinc-900 hover:bg-zinc-50"
+                  >
+                    Create Your First Request
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {userRequests.map((request) => (
+                <Card key={request._id} className={`bg-white border border-gray-400 shadow-sm hover:shadow-md transition-all duration-200 ${
+                  request.status === "approved" 
+                    ? "bg-green-50" 
+                    : request.status === "pending" 
+                    ? "bg-yellow-50" 
+                    : "bg-white"
+                }`}>
+                  <CardHeader className="border-b border-gray-200 p-4">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="space-y-1 flex-1 min-w-0">
+                        <CardTitle className="text-zinc-900 text-lg font-semibold truncate">{request.title}</CardTitle>
+                        <CardDescription className="text-zinc-500 text-sm line-clamp-2">
+                          {request.description}
+                        </CardDescription>
+                      </div>
+                      <Badge
+                        variant={
+                          request.status === "approved"
+                            ? "default"
+                            : request.status === "rejected"
+                            ? "destructive"
+                            : "secondary"
+                        }
+                        className={`capitalize font-medium px-2 py-1 ${
+                          request.status === "approved"
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : request.status === "rejected"
+                            ? "bg-red-50 text-red-700 border-red-200"
+                            : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                        }`}
+                      >
+                        {request.status === "approved" && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                        {request.status === "rejected" && <XCircle className="h-3 w-3 mr-1" />}
+                        {request.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
+                        {request.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-zinc-700 text-sm font-medium">Target Industries</Label>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {request.industry.target.map((industry, index) => (
+                            <Badge 
+                              key={index} 
+                              variant="secondary" 
+                              className="bg-zinc-50 text-zinc-700 hover:bg-zinc-100 border border-zinc-200 text-xs px-2 py-0.5"
+                            >
+                              {industry}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-zinc-700 text-sm font-medium">Target Regions</Label>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {request.geography.target.map((region, index) => (
+                            <Badge 
+                              key={index} 
+                              variant="secondary" 
+                              className="bg-zinc-50 text-zinc-700 hover:bg-zinc-100 border border-zinc-200 text-xs px-2 py-0.5"
+                            >
+                              {region}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="pt-3 flex justify-end gap-2 border-t border-gray-200">
+                        {request.status !== "approved" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => startEdit(request)}
+                            disabled={request.hasBeenEdited}
+                            className={`text-black border-zinc-200 hover:bg-zinc-50 h-8 ${
+                              request.hasBeenEdited ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
+                          >
+                            <Edit2 className="h-3.5 w-3.5 mr-1.5" />
+                            {request.hasBeenEdited ? "Already Edited" : "Edit"}
+                          </Button>
+                        )}
+                        {request.status !== "approved" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(request._id)}
+                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 h-8"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 } 
